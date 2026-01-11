@@ -5,6 +5,7 @@ import { Auth } from './components/Auth';
 import { Dashboard } from './components/Dashboard';
 import { AdminDashboard } from './components/AdminDashboard';
 import { CandidateSession } from './components/CandidateSession';
+import { ReportView } from './components/ReportView';
 import { AppState } from './types';
 import { Code2, ArrowRight } from 'lucide-react';
 
@@ -56,7 +57,7 @@ const ProtectedAdminRoute = ({ children }) => {
 
 const DashboardWrapper = () => {
     const navigate = useNavigate();
-    const { setActiveInterviewId, setAppState, setUser } = useAppStore();
+    const { setActiveInterviewId, setAppState, setUser, setFeedbackData } = useAppStore();
 
     const handleStartNew = () => {
         setAppState(AppState.LANDING); 
@@ -69,7 +70,12 @@ const DashboardWrapper = () => {
     };
 
     const handleViewReport = (feedback) => {
-        alert("Detailed report view is available at the end of the interview session.");
+        if (!feedback) {
+            alert("No feedback available for this interview.");
+            return;
+        }
+        setFeedbackData(feedback);
+        navigate('/mockmate/candidate/report');
     };
 
     const handleLogout = () => {
@@ -129,6 +135,12 @@ export default function App() {
         <Route path="/mockmate/candidate/practice" element={
             <ProtectedCandidateRoute>
                 <CandidateSession />
+            </ProtectedCandidateRoute>
+        } />
+        
+        <Route path="/mockmate/candidate/report" element={
+            <ProtectedCandidateRoute>
+                <ReportView />
             </ProtectedCandidateRoute>
         } />
 

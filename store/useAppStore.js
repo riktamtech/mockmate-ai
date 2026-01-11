@@ -17,9 +17,13 @@ export const useAppStore = create((set) => ({
   interviewConfig: null,
   setInterviewConfig: (interviewConfig) => set({ interviewConfig }),
   
+  feedbackData: null,
+  setFeedbackData: (feedbackData) => set({ feedbackData }),
+  
   resetSession: () => set({ 
     activeInterviewId: null, 
     interviewConfig: null,
+    feedbackData: null,
     // Keep language and user
   })
 }));
