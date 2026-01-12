@@ -64,8 +64,7 @@ This interview can be for ANY role (Tech, Sales, Marketing, HR, etc.).
 
 Instructions:
 - Ask ONE question at a time. Do not overwhelm the user.
-- Start by asking what role they are practicing for.
-- Once you have all three pieces of information clearly, you MUST output a final JSON block strictly in this format and stop:
+- Start by asking what role they are practicing for.- If the user provides all three details in a single message (role, focus/stack, and level), immediately output the final JSON block (as shown below) and stop — do NOT ask follow-up questions.- Once you have all three pieces of information clearly, you MUST output a final JSON block strictly in this format and stop:
   \`\`\`json
   { "READY": true, "role": "...", "focusArea": "...", "level": "..." }
   \`\`\`
@@ -124,6 +123,8 @@ export const createInterviewerChat = (context, existingHistory = [], interviewId
   const resumeInstruction = context.resumeData 
     ? "A resume has been provided. You MUST ask at least 2 specific questions about the projects, experience, and skills listed in the user's resume. Verify their details and ask for deep dives into their past work." 
     : "No resume provided. Ask standard questions for the role.";
+    
+  const totalQuestions = context.totalQuestions || 10;
 
   const systemInstruction = `You are an expert Professional Interviewer conducting a mock interview.
 ${systemContext}
@@ -134,14 +135,17 @@ Your Responsibilities:
 2. If a resume is provided, prioritize asking about specific projects, metrics, and experiences mentioned in it.
 3. If the role is technical, ask coding or system design questions. If non-technical (Sales, HR, etc.), ask situational, behavioral, or strategic questions.
 4. Ask ONE question at a time. Wait for the user's response.
-5. Start by introducing yourself and asking the first question.
-6. Keep your responses concise enough to be spoken (approx 2-4 sentences is ideal for conversation).
-7. If the user's answer is correct/good, briefly acknowledge it and move to a harder or related question.
-8. If the user's answer is incorrect or vague, gently dig deeper or clarify.
-9. Maintain a professional yet neutral tone.
+5. YOU MUST ASK EXACTLY ${totalQuestions} QUESTIONS IN TOTAL. Keep track of how many questions you have asked.
+6. After the user answers the ${totalQuestions}th question, honestly evaluate the answer, and then clearly state: "That concludes our interview. Thank you." DO NOT ask any more questions.
+7. Start by introducing yourself and asking the first question.
+8. Keep your responses concise enough to be spoken (approx 2-4 sentences is ideal for conversation).
+9. If the user's answer is correct/good, briefly acknowledge it and move to a harder or related question.
+10. If the user's answer is incorrect or vague, gently dig deeper or clarify.
+11. Maintain a professional yet neutral tone.
 
 IMPORTANT: You will receive audio input from the user. Respond with clear, spoken-style text.
 `;
+
 
   let history = existingHistory.length > 0 ? existingHistory : [];
   
@@ -271,6 +275,26 @@ export const sendAudioMessage = async (chat, audioBase64, mimeType) => {
       fullText += chunk;
   });
   return fullText;
+};
+
+// --- AI Setup Verifier ---
+// Given a single user message, ask the coordinator model to parse it and return a
+// compact JSON object: { READY: bool, role: string|null, focusArea: string|null, level: string|null }
+export const verifySetupWithAI = async (inputText, language = 'English') => {
+  let fullResponse = "";
+  const systemInstruction = `You are a strict JSON extractor.
+Given the user's single message intended to set up an interview (role, focus/stack, experience level),
+extract those three fields and output ONLY a JSON object. Use these keys exactly: READY (true if enough info to start), role, focusArea, level.
+If you are uncertain about any field, set it to null and set READY to false. Do not include any explanation text.`;
+
+  await api.chatStream([], inputText, {
+    systemInstruction,
+    modelName: 'mockmate-coordinator',
+    language,
+    maxOutputTokens: 256
+  }, (chunk) => { fullResponse += chunk; });
+
+  return fullResponse;
 };
 
 // --- TTS ---

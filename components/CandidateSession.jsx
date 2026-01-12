@@ -22,7 +22,7 @@ import { api } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
-const TOTAL_QUESTIONS = 5;
+
 
 // Helper to convert Blob to Base64
 const blobToBase64 = (blob) => {
@@ -52,6 +52,7 @@ export const CandidateSession = () => {
 
   const navigate = useNavigate();
 
+  const [totalQuestions, setTotalQuestions] = useState(10);
   const [messages, setMessages] = useState([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentQuestionCount, setCurrentQuestionCount] = useState(0);
@@ -90,7 +91,8 @@ export const CandidateSession = () => {
      setInterviewConfig(config);
      
      const history = interview.history || [];
-     const context = { ...config.roleDetails, language: config.language };
+     const context = { ...config.roleDetails, language: config.language, totalQuestions };
+
      
      const chat = createInterviewerChat(context, history, interview._id);
      chatSessionRef.current = chat;
@@ -265,8 +267,9 @@ export const CandidateSession = () => {
     setCurrentQuestionCount(1);
     
     const context = config.type === 'jd' 
-      ? { jd: config.jdText, language: config.language } 
-      : { ...config.roleDetails, resumeData: config.resumeData, language: config.language };
+      ? { jd: config.jdText, language: config.language, totalQuestions } 
+      : { ...config.roleDetails, resumeData: config.resumeData, language: config.language, totalQuestions };
+
       
     const chat = createInterviewerChat(context, [], id);
     chatSessionRef.current = chat;
@@ -308,7 +311,8 @@ export const CandidateSession = () => {
       setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, text: chunk, isThinking: false } : m));
     });
     
-    setCurrentQuestionCount(prev => Math.min(prev + 1, TOTAL_QUESTIONS));
+    setCurrentQuestionCount(prev => Math.min(prev + 1, totalQuestions));
+
     
     if (activeInterviewId) {
         const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
@@ -328,6 +332,11 @@ export const CandidateSession = () => {
     }
     
     setIsStreaming(false);
+
+    if (currentQuestionCount >= totalQuestions) {
+        const fullHistory = convertHistoryToMessages(chatSessionRef.current.history);
+        setTimeout(() => handleEndInterview(fullHistory), 4000);
+    }
   };
 
   const handleInterviewAudio = async (audioBlob) => {
@@ -351,7 +360,8 @@ export const CandidateSession = () => {
 
       const textResponse = await sendAudioMessage(chatSessionRef.current, base64Audio, audioBlob.type);
       
-      setCurrentQuestionCount(prev => Math.min(prev + 1, TOTAL_QUESTIONS));
+      setCurrentQuestionCount(prev => Math.min(prev + 1, totalQuestions));
+
       setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, text: textResponse } : m));
       
       if (activeInterviewId) {
@@ -362,6 +372,11 @@ export const CandidateSession = () => {
       }
 
       const audioBuffer = await generateSpeech(textResponse);
+      if (currentQuestionCount >= totalQuestions) {
+          const fullHistory = convertHistoryToMessages(chatSessionRef.current.history);
+          setTimeout(() => handleEndInterview(fullHistory), 4000);
+      }
+
       if (audioBuffer) {
         playAudioBuffer(audioBuffer);
       }
@@ -386,11 +401,12 @@ export const CandidateSession = () => {
     handleGoToDashboard();
   };
 
-  const handleEndInterview = async () => {
+  const handleEndInterview = async (finalMessages = null) => {
     setAppState(AppState.INTERVIEW_FEEDBACK); 
     setMessages(prev => [...prev, { id: generateId(), role: 'system', text: "Interview ended. Generating detailed performance report...", timestamp: new Date() }]);
     
-    const feedback = await generateFeedback(messages, language);
+    const msgsToAnalyze = finalMessages || messages;
+    const feedback = await generateFeedback(msgsToAnalyze, language);
     setFeedbackData(feedback);
 
     if (feedback && activeInterviewId) {
@@ -423,8 +439,13 @@ export const CandidateSession = () => {
   return (
     <>
       {appState === AppState.LANDING && (
-        <Landing onSelectMode={handleSelectMode} />
+        <Landing 
+          onSelectMode={handleSelectMode} 
+          totalQuestions={totalQuestions} 
+          onTotalQuestionsChange={setTotalQuestions}
+        />
       )}
+
 
       {appState === AppState.SETUP_JD && (
         <JDPaste onStart={handleJDStart} onBack={handleBackToLanding} />
@@ -463,7 +484,8 @@ export const CandidateSession = () => {
           placeholder="Type your answer or use microphone..."
           mode="audio"
           currentQuestion={currentQuestionCount}
-          totalQuestions={TOTAL_QUESTIONS}
+          totalQuestions={totalQuestions}
+
         />
       )}
     </>

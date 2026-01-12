@@ -1,7 +1,13 @@
 const { GoogleGenAI, Type, Modality } = require("@google/genai");
 const Interview = require('../models/Interview');
 
-const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
+// Initialize Gemini API with validation
+if (!process.env.GOOGLE_API_KEY) {
+  console.error('FATAL: GOOGLE_API_KEY not set in environment variables. Backend will not function.');
+  console.error('Set GOOGLE_API_KEY in your .env file before starting the server.');
+}
+
+const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || '' });
 
 // Map prefixed models to actual Gemini models
 const MODEL_MAP = {
@@ -111,8 +117,15 @@ exports.chatStream = async (req, res) => {
 
   } catch (error) {
     console.error("AI Stream Error:", error);
-    if (!res.headersSent) {
-        res.status(500).json({ error: error.message });
+    const errorMsg = error.message || 'Unknown error occurred';
+    
+    if (errorMsg.includes('Could not load the default credentials') || errorMsg.includes('GOOGLE_API_KEY')) {
+      console.error('Auth Error: GOOGLE_API_KEY is not set or invalid');
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'API authentication failed. Ensure GOOGLE_API_KEY is set in server environment.' });
+      }
+    } else if (!res.headersSent) {
+        res.status(500).json({ error: errorMsg });
     } else {
         res.end();
     }

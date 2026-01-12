@@ -7,7 +7,7 @@ const LANGUAGES = [
   'English', 'Spanish', 'French', 'German', 'Hindi', 'Mandarin', 'Japanese', 'Portuguese'
 ];
 
-export const Landing = ({ onSelectMode }) => {
+export const Landing = ({ onSelectMode, totalQuestions, onTotalQuestionsChange }) => {
   const { language, setLanguage, user, setAppState } = useAppStore();
 
   return (
@@ -44,18 +44,34 @@ export const Landing = ({ onSelectMode }) => {
             Practice realistic scenarios tailored to your target role.
           </p>
 
-          {/* Language Selector */}
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <Globe size={18} className="text-slate-400" />
-            <select 
-              value={language} 
-              onChange={(e) => setLanguage(e.target.value)}
-              className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-            >
-              {LANGUAGES.map(lang => (
-                <option key={lang} value={lang}>{lang}</option>
-              ))}
-            </select>
+          {/* Settings Row: Language & Question Count */}
+          <div className="flex flex-wrap items-center justify-center gap-6 mt-4">
+            <div className="flex items-center gap-2">
+              <Globe size={18} className="text-slate-400" />
+              <select 
+                value={language} 
+                onChange={(e) => setLanguage(e.target.value)}
+                className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+              >
+                {LANGUAGES.map(lang => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
+            </div>
+
+            {onTotalQuestionsChange && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-600">Questions:</span>
+                <input 
+                  type="number" 
+                  min="1" 
+                  max="20"
+                  value={totalQuestions || 10} 
+                  onChange={(e) => onTotalQuestionsChange(parseInt(e.target.value) || 10)}
+                  className="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-center"
+                />
+              </div>
+            )}
           </div>
         </div>
 
