@@ -1,4 +1,4 @@
-require('dotenv').config();
+require("dotenv").config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -16,7 +16,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' })); 
 
 // Database Connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/mockmate')
+mongoose.connect(process.env.MONGODB_URL || 'mongodb://localhost:27017/mockmate')
   .then(() => console.log('MongoDB Connected'))
   .catch(err => console.error('MongoDB Connection Error:', err));
 
