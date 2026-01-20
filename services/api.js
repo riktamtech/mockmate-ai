@@ -1,6 +1,6 @@
 // Wrapper for Backend API calls
-const API_URL = 'http://localhost:5001';
-// const API_URL = "";
+// const API_URL = 'http://localhost:5001';
+const API_URL = "";
 
 export const getAuthHeader = () => {
   const token = localStorage.getItem('token');
