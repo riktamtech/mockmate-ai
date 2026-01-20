@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './ui/Button';
 import { api } from '../services/api';
 import { Code2 } from 'lucide-react';
@@ -12,6 +12,51 @@ export const Auth = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleGoogleResponse = async (response) => {
+    setLoading(true);
+    try {
+      const data = await api.googleLogin(response.credential);
+      localStorage.setItem('token', data.token);
+      onLoginSuccess(data);
+      if (data.isAdmin) {
+        navigate('/mockmate/admin');
+      } else {
+        navigate('/mockmate/candidate/dashboard');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Google Login failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const initializeGoogleOneTap = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: "29688754422-1cm4i8vdffevoav9pfuo624gbk9p43oq.apps.googleusercontent.com",
+          callback: handleGoogleResponse
+        });
+        window.google.accounts.id.renderButton(
+          document.getElementById("googleSignInDiv"),
+          { theme: "outline", size: "large", width: "100%" }
+        );
+      }
+    };
+
+    if (!window.google) {
+      const script = document.createElement('script');
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeGoogleOneTap;
+      document.body.appendChild(script);
+    } else {
+      initializeGoogleOneTap();
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,6 +135,17 @@ export const Auth = ({ onLoginSuccess }) => {
              {isLogin ? 'Login' : 'Sign Up'}
           </Button>
         </form>
+
+        <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-slate-200"></span>
+            </div>
+            <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-slate-500">Or continue with</span>
+            </div>
+        </div>
+        
+        <div id="googleSignInDiv" className="w-full flex justify-center mb-6"></div>
 
         <div className="mt-6 text-center text-sm">
            <button onClick={() => setIsLogin(!isLogin)} className="text-blue-600 hover:underline">

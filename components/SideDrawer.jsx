@@ -50,7 +50,7 @@ export const SideDrawer = ({ isOpen, onClose }) => {
               <User size={24} />
             </div>
             <div className="overflow-hidden">
-              <h3 className="font-semibold text-slate-900 truncate">{user?.name || 'Candidate'}</h3>
+              <h3 className="font-semibold text-slate-900 truncate">{user?.name || user?.email.split('@')[0]}</h3>
               <p className="text-xs text-slate-500 truncate">{user?.email || 'user@example.com'}</p>
             </div>
           </div>

@@ -29,6 +29,16 @@ export const api = {
     return res.json();
   },
 
+  googleLogin: async (token) => {
+    const res = await fetch(`${API_URL}/api/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    if (!res.ok) throw new Error('Google Login failed');
+    return res.json();
+  },
+
   getMe: async () => {
     const res = await fetch(`${API_URL}/api/auth/me`, {
       method: 'GET',
