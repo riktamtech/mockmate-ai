@@ -43,7 +43,7 @@ export const Dashboard = ({ onStartNew, onResume, onViewReport }) => {
             <h1 className="text-3xl font-bold text-slate-900">Your Interviews</h1>
             <p className="text-slate-500">Track your progress and review feedback.</p>
           </div>
-          <Button onClick={onStartNew} size="lg" className="shadow-lg shadow-blue-500/20">
+          <Button onClick={onStartNew} size="md" className="shadow-lg shadow-blue-500/20">
             <Plus size={20} className="mr-2" /> Start New Interview
           </Button>
         </div>
