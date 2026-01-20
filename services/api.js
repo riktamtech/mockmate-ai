@@ -1,5 +1,6 @@
 // Wrapper for Backend API calls
-// const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const API_URL = 'http://localhost:5001';
+// const API_URL = "";
 
 export const getAuthHeader = () => {
   const token = localStorage.getItem('token');
@@ -9,7 +10,7 @@ export const getAuthHeader = () => {
 export const api = {
   // Auth
   login: async (email, password) => {
-    const res = await fetch(`/api/auth/login`, {
+    const res = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
@@ -19,7 +20,7 @@ export const api = {
   },
 
   register: async (name, email, password) => {
-    const res = await fetch(`/api/auth/register`, {
+    const res = await fetch(`${API_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password })
@@ -28,9 +29,18 @@ export const api = {
     return res.json();
   },
 
+  getMe: async () => {
+    const res = await fetch(`${API_URL}/api/auth/me`, {
+      method: 'GET',
+      headers: { ...getAuthHeader() }
+    });
+    if (!res.ok) throw new Error('Failed to fetch user');
+    return res.json();
+  },
+
   // Interviews
   createInterview: async (data) => {
-    const res = await fetch(`/api/interviews`, {
+    const res = await fetch(`${API_URL}/api/interviews`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -42,7 +52,7 @@ export const api = {
   },
 
   getMyInterviews: async () => {
-    const res = await fetch(`/api/interviews`, {
+    const res = await fetch(`${API_URL}/api/interviews`, {
       method: 'GET',
       headers: { ...getAuthHeader() }
     });
@@ -50,7 +60,7 @@ export const api = {
   },
 
   getInterview: async (id) => {
-    const res = await fetch(`/api/interviews/${id}`, {
+    const res = await fetch(`${API_URL}/api/interviews/${id}`, {
       method: 'GET',
       headers: { ...getAuthHeader() }
     });
@@ -58,7 +68,7 @@ export const api = {
   },
 
   updateInterview: async (id, data) => {
-    const res = await fetch(`/api/interviews/${id}`, {
+    const res = await fetch(`${API_URL}/api/interviews/${id}`, {
       method: 'PUT',
       headers: { 
         'Content-Type': 'application/json',
@@ -70,7 +80,7 @@ export const api = {
   },
 
   deleteInterview: async (id) => {
-    const res = await fetch(`/api/interviews/${id}`, {
+    const res = await fetch(`${API_URL}/api/interviews/${id}`, {
       method: 'DELETE',
       headers: { ...getAuthHeader() }
     });
@@ -79,7 +89,7 @@ export const api = {
 
   // Admin
   getAdminStats: async () => {
-    const res = await fetch(`/api/admin/stats`, {
+    const res = await fetch(`${API_URL}/api/admin/stats`, {
       method: 'GET',
       headers: { ...getAuthHeader() }
     });
@@ -88,7 +98,7 @@ export const api = {
   },
 
   getAllUsers: async () => {
-    const res = await fetch(`/api/admin/users`, {
+    const res = await fetch(`${API_URL}/api/admin/users`, {
       method: 'GET',
       headers: { ...getAuthHeader() }
     });
@@ -99,8 +109,8 @@ export const api = {
   // AI Proxy
   chatStream: async (history, message, config, onChunk) => {
     const payload = { history, message, ...config };
-    
-    const res = await fetch(`/api/ai/chat`, {
+
+    const res = await fetch(`${API_URL}/api/ai/chat`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -123,7 +133,7 @@ export const api = {
   },
 
   generateFeedback: async (prompt, language) => {
-    const res = await fetch(`/api/ai/feedback`, {
+    const res = await fetch(`${API_URL}/api/ai/feedback`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -135,7 +145,7 @@ export const api = {
   },
 
   generateSpeech: async (text) => {
-    const res = await fetch(`/api/ai/tts`, {
+    const res = await fetch(`${API_URL}/api/ai/tts`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',

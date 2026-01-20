@@ -20,6 +20,9 @@ import {
 } from '../services/geminiService';
 import { api } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { SideDrawer } from './SideDrawer';
+import { MenuButton } from './MenuButton';
+import { Loader2 } from 'lucide-react';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
@@ -58,6 +61,8 @@ export const CandidateSession = () => {
   const [currentQuestionCount, setCurrentQuestionCount] = useState(0);
   const [feedbackData, setFeedbackData] = useState(null);
   const [resumeContext, setResumeContext] = useState(null);
+  const [isResuming, setIsResuming] = useState(!!activeInterviewId);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const startTimeRef = useRef(Date.now());
   
   const chatSessionRef = useRef(null);
@@ -65,13 +70,19 @@ export const CandidateSession = () => {
   useEffect(() => {
     const initSession = async () => {
         if (activeInterviewId && !chatSessionRef.current) {
+            setIsResuming(true);
             try {
                 const interview = await api.getInterview(activeInterviewId);
                 await resumeInterview(interview);
             } catch (e) {
                 console.error("Failed to recover session", e);
                 navigate('/mockmate/candidate/dashboard');
+            } finally {
+                setIsResuming(false);
             }
+        } else {
+            setIsResuming(false);   navigate('/mockmate/candidate/dashboard');
+            
         }
     };
     initSession();
@@ -146,6 +157,15 @@ export const CandidateSession = () => {
     const config = { type: 'jd', jdText, language };
     setInterviewConfig(config);
     startInterview(config);
+  };
+
+  const handlePlayAudio = async (text) => {
+    try {
+        const audioBuffer = await generateSpeech(text);
+        if (audioBuffer) playAudioBuffer(audioBuffer);
+    } catch (error) {
+        console.error("Failed to play audio", error);
+    }
   };
 
   const handleResumeFileSelect = async (file) => {
@@ -423,6 +443,17 @@ export const CandidateSession = () => {
     }
   };
 
+  if (isResuming) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+          <p className="text-slate-500 font-medium animate-pulse">Resuming Interview...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (appState === AppState.INTERVIEW_FEEDBACK) {
      if (!feedbackData) {
        return (
@@ -438,6 +469,14 @@ export const CandidateSession = () => {
 
   return (
     <>
+      {appState !== AppState.INTERVIEW_ACTIVE && (
+        <div className="absolute top-6 right-6 z-30">
+          <MenuButton onClick={() => setIsDrawerOpen(true)} />
+        </div>
+      )}
+      <SideDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+
+      
       {appState === AppState.LANDING && (
         <Landing 
           onSelectMode={handleSelectMode} 
@@ -478,6 +517,7 @@ export const CandidateSession = () => {
           messages={messages}
           onSendMessage={handleInterviewMessage}
           onSendAudio={handleInterviewAudio}
+          onPlayAudio={handlePlayAudio}
           isStreaming={isStreaming}
           onEndSession={handleEndInterview}
           onSaveExit={handleSaveAndExit}

@@ -17,7 +17,8 @@ export const ChatInterface = ({
   onBack,
   mode = 'text',
   currentQuestion,
-  totalQuestions
+  totalQuestions,
+  onPlayAudio
 }) => {
   const [activeInputMode, setActiveInputMode] = useState(mode);
   const [input, setInput] = useState('');
@@ -127,7 +128,7 @@ export const ChatInterface = ({
            </div>
         )}
         {messages.map((msg) => (
-          <ChatMessage key={msg.id} message={msg} />
+          <ChatMessage key={msg.id} message={msg} onPlayAudio={onPlayAudio} />
         ))}
         {isStreaming && activeInputMode === 'audio' && (
           <div className="flex justify-start w-full mb-6">

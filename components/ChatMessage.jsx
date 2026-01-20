@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { User, Bot } from 'lucide-react';
+import { User, Bot, Volume2, Loader2 } from 'lucide-react';
 
-export const ChatMessage = ({ message }) => {
+export const ChatMessage = ({ message, onPlayAudio }) => {
   const isUser = message.role === 'user';
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const handlePlay = async () => {
+    if (onPlayAudio && !isPlaying) {
+      setIsPlaying(true);
+      await onPlayAudio(message.text);
+      setIsPlaying(false);
+    }
+  };
   
   return (
     <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -29,14 +38,32 @@ export const ChatMessage = ({ message }) => {
                  <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                </div>
             ) : (
-              <div className={`prose prose-sm md:prose-base max-w-none ${isUser ? 'prose-invert' : 'prose-slate'}`}>
-                <ReactMarkdown>{message.text}</ReactMarkdown>
-              </div>
+                <div className={`prose prose-sm md:prose-base max-w-none ${isUser ? 'prose-invert' : 'prose-slate'}`}>
+                    <ReactMarkdown>{message.text}</ReactMarkdown>
+                </div>
             )}
           </div>
-          <span className="text-xs text-slate-500 mt-1 px-1">
-            {message.role === 'user' ? 'You' : 'Interviewer'} • {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
+          
+          <div className="flex items-center gap-2 mt-1 px-1">
+             {/* Audio Replay Button */}
+            {!isUser && !message.isThinking && onPlayAudio && (
+                <button 
+                    onClick={handlePlay}
+                    disabled={isPlaying}
+                    className="flex items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors text-xs font-medium disabled:opacity-50"
+                    title="Re-play audio"
+                >
+                    {isPlaying ? <Loader2 size={14} className="animate-spin" /> : <Volume2 size={14} />}
+                    {isPlaying ? 'Playing...' : 'Re-hear'}
+                </button>
+            )}
+            
+            {/* Timestamp */}
+            <span className="text-xs text-slate-400">
+                • {new Date(message.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+
         </div>
       </div>
     </div>

@@ -54,8 +54,12 @@ export const AdminDashboard = () => {
              </div>
              <span className="font-bold text-xl">MockMate Admin</span>
            </div>
-           <button onClick={handleLogout} className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors">
-             <LogOut size={18} /> Logout
+           <button 
+             onClick={handleLogout} 
+             className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-all shadow-sm"
+           >
+             <LogOut size={18} /> 
+             <span>Logout</span>
            </button>
         </div>
       </div>

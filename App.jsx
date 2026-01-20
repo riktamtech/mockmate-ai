@@ -7,7 +7,10 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { CandidateSession } from './components/CandidateSession';
 import { ReportView } from './components/ReportView';
 import { AppState } from './types';
-import { Code2, ArrowRight, LogOut } from 'lucide-react';
+import { Code2, ArrowRight } from 'lucide-react';
+import { SideDrawer } from './components/SideDrawer';
+import { MenuButton } from './components/MenuButton';
+import { api } from './services/api';
 
 const LandingPage = () => {
     const navigate = useNavigate();
@@ -57,7 +60,8 @@ const ProtectedAdminRoute = ({ children }) => {
 
 const DashboardWrapper = () => {
     const navigate = useNavigate();
-    const { setActiveInterviewId, setAppState, setUser, setFeedbackData } = useAppStore();
+    const { setAppState, setActiveInterviewId, setFeedbackData } = useAppStore();
+    const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
     const handleStartNew = () => {
         setAppState(AppState.LANDING); 
@@ -78,21 +82,12 @@ const DashboardWrapper = () => {
         navigate('/mockmate/candidate/report');
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        setUser(null);
-        navigate('/mockmate/login');
-    };
-
     return (
-        <div className="relative">
-            <button 
-                onClick={handleLogout} 
-                className="absolute top-6 right-6 flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md z-10"
-            >
-                <LogOut size={18} />
-                Logout
-            </button>
+        <div className="relative min-h-screen bg-slate-50">
+            <div className="absolute top-6 right-6 z-10">
+                <MenuButton onClick={() => setIsDrawerOpen(true)} />
+            </div>
+            <SideDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
             <Dashboard 
                 onStartNew={handleStartNew} 
                 onResume={handleResume} 
@@ -109,8 +104,12 @@ export default function App() {
     const token = localStorage.getItem('token');
     if (token) {
         if (!useAppStore.getState().user) {
-             // Rehydrate user logic here if needed, for now stubbed
-             setUser({ _id: 'loaded', name: 'User', email: '...', isAdmin: false });
+             api.getMe().then(user => {
+                setUser(user);
+             }).catch(() => {
+                localStorage.removeItem('token');
+                setUser(null);
+             });
         }
     }
   }, []);
