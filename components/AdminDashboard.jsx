@@ -223,29 +223,48 @@ const InterviewDetailsModal = ({ interview, onClose }) => {
               {details?.qaHistory?.length === 0 ? (
                 <p className="text-center text-slate-400 py-8">No responses recorded</p>
               ) : (
-                details?.qaHistory?.map((qa, index) => (
-                  <div key={index} className="border border-slate-200 rounded-lg overflow-hidden">
-                    <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
-                      <div className="flex items-center gap-2">
-                        <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded">
-                          Q{index + 1}
-                        </span>
-                        <span className="text-sm font-medium text-slate-700">{qa.question}</span>
+                details?.qaHistory?.map((qa, index) => {
+                  // Find matching audio recording for this question (index + 1 because questionIndex is 1-based)
+                  const audioRecording = details?.audioRecordings?.find(
+                    r => r.questionIndex === index + 1
+                  );
+                  
+                  return (
+                    <div key={index} className="border border-slate-200 rounded-lg overflow-hidden">
+                      <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded">
+                            Q{index + 1}
+                          </span>
+                          <span className="text-sm font-medium text-slate-700">{qa.question}</span>
+                        </div>
+                      </div>
+                      <div className="px-4 py-3">
+                        {qa.hasAudioData && audioRecording?.url ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
+                              <Mic size={12} />
+                              <span>Audio Response</span>
+                            </div>
+                            <AudioPlayer 
+                              url={audioRecording.url}
+                              label={`Response ${index + 1}`}
+                              duration={audioRecording.durationSeconds}
+                            />
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
+                              <MessageSquare size={12} />
+                              <span>Text Response</span>
+                            </div>
+                            <p className="text-sm text-slate-600">{qa.answer}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="px-4 py-3">
-                      <p className="text-sm text-slate-600">
-                        {qa.hasAudioData ? (
-                          <span className="flex items-center gap-2 text-slate-500">
-                            <Mic size={14} /> Audio response (see Recordings tab)
-                          </span>
-                        ) : (
-                          qa.answer
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}

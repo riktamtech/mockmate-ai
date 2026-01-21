@@ -83,9 +83,8 @@ const InterviewSchema = new mongoose.Schema({
   }
 });
 
-InterviewSchema.pre('save', function(next) {
+InterviewSchema.pre('save', function() {
   this.updatedAt = Date.now();
-  next();
 });
 
 module.exports = mongoose.model('Interview', InterviewSchema);

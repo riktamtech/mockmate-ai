@@ -25,7 +25,8 @@ export const ChatInterface = ({
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
-    const enableTextInput = localStorage.getItem("enableTextInput") === "true";
+    // Enable text input via localStorage flag OR if no audio handler is provided
+    const enableTextInput = localStorage.getItem("enableTextInput") === "true" || !onSendAudio;
 
     useEffect(() => {
         setActiveInputMode(mode);

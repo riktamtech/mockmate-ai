@@ -322,37 +322,43 @@ export const CandidateSession = () => {
     const botMsgId = generateId();
     setMessages(prev => [...prev, { id: botMsgId, role: 'model', text: 'Thinking...', timestamp: new Date(), isThinking: true }]);
 
-    let fullResponse = "";
-    await sendMessageStream(chatSessionRef.current, text, (chunk) => {
-      fullResponse = chunk;
-      setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, text: chunk, isThinking: false } : m));
-    });
-    
-    setCurrentQuestionCount(prev => Math.min(prev + 1, totalQuestions));
+    try {
+      let fullResponse = "";
+      await sendMessageStream(chatSessionRef.current, text, (chunk) => {
+        fullResponse = chunk;
+        setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, text: chunk, isThinking: false } : m));
+      });
+      
+      setCurrentQuestionCount(prev => Math.min(prev + 1, totalQuestions));
 
-    
-    if (activeInterviewId) {
-        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        api.updateInterview(activeInterviewId, { 
-            status: 'IN_PROGRESS', // Keep status updated implicitly
-            durationSeconds: elapsed 
-        });
-    }
+      // Update interview duration
+      if (activeInterviewId) {
+          const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+          api.updateInterview(activeInterviewId, { 
+              durationSeconds: elapsed 
+          }).catch(err => console.error('Failed to update interview:', err));
+      }
 
-    if (fullResponse) {
-       setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, isThinking: true } : m));
-       const audioBuffer = await generateSpeech(fullResponse);
-       if (audioBuffer) {
-         playAudioBuffer(audioBuffer);
-       }
-       setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, isThinking: false } : m));
-    }
-    
-    setIsStreaming(false);
-
-    if (currentQuestionCount >= totalQuestions) {
-        const fullHistory = convertHistoryToMessages(chatSessionRef.current.history);
-        setTimeout(() => handleEndInterview(fullHistory), 4000);
+      // Generate speech for the response
+      if (fullResponse) {
+         setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, isThinking: true } : m));
+         const audioBuffer = await generateSpeech(fullResponse);
+         if (audioBuffer) {
+           playAudioBuffer(audioBuffer);
+         }
+         setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, isThinking: false } : m));
+      }
+      
+      // Check if interview should end
+      if (currentQuestionCount >= totalQuestions) {
+          const fullHistory = convertHistoryToMessages(chatSessionRef.current.history);
+          setTimeout(() => handleEndInterview(fullHistory), 4000);
+      }
+    } catch (error) {
+      console.error("Interview Error:", error);
+      setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, text: "Error processing your response. Please try again.", isThinking: false } : m));
+    } finally {
+      setIsStreaming(false);
     }
   };
 
