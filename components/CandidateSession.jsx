@@ -375,6 +375,16 @@ export const CandidateSession = () => {
       const botMsgId = generateId();
       setMessages(prev => [...prev, { id: botMsgId, role: 'model', text: 'Listening and thinking...', timestamp: new Date(), isThinking: true }]);
 
+      // Upload audio to S3 in background (non-blocking)
+      if (activeInterviewId) {
+        api.uploadAudioRecording(
+          activeInterviewId, 
+          audioBlob, 
+          currentQuestionCount,
+          0 // duration will be calculated on backend if needed
+        ).catch(err => console.error('Audio upload failed:', err));
+      }
+
       const textResponse = await sendAudioMessage(chatSessionRef.current, base64Audio, audioBlob.type);
       
       setCurrentQuestionCount(prev => Math.min(prev + 1, totalQuestions));

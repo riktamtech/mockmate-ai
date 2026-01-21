@@ -59,12 +59,21 @@ exports.loginUser = async (req, res) => {
 };
 
 exports.getMe = async (req, res) => {
-  res.json({
-    _id: req.user._id,
-    name: req.user.name,
-    email: req.user.email,
-    isAdmin: req.user.isAdmin,
-  });
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authorized, user not found' });
+    }
+    
+    res.json({
+      _id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      isAdmin: req.user.isAdmin,
+    });
+  } catch (error) {
+    console.error('GetMe error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
 
 exports.googleLogin = async (req, res) => {

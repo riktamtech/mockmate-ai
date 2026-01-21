@@ -1,5 +1,29 @@
 const mongoose = require('mongoose');
 
+// Schema for audio recordings
+const AudioRecordingSchema = new mongoose.Schema({
+  s3Key: {
+    type: String,
+    required: true
+  },
+  mimeType: {
+    type: String,
+    default: 'audio/webm'
+  },
+  questionIndex: {
+    type: Number,
+    required: true
+  },
+  durationSeconds: {
+    type: Number,
+    default: 0
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: true });
+
 const InterviewSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -31,6 +55,8 @@ const InterviewSchema = new mongoose.Schema({
       }
     }]
   }],
+  // Audio recordings for each response
+  audioRecordings: [AudioRecordingSchema],
   date: {
     type: Date,
     default: Date.now

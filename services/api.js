@@ -1,130 +1,135 @@
-// Wrapper for Backend API calls
-// const API_URL = 'http://localhost:5001';
-const API_URL = "";
+import axios from 'axios';
 
-export const getAuthHeader = () => {
-  const token = localStorage.getItem('token');
-  return token ? { 'Authorization': `Bearer ${token}` } : {};
-};
+const API_URL = 'http://localhost:5001';
+
+const axiosInstance = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const message = error.response?.data?.message || error.message || 'Request failed';
+    return Promise.reject(new Error(message));
+  }
+);
+
+export { axiosInstance };
 
 export const api = {
-  // Auth
   login: async (email, password) => {
-    const res = await fetch(`${API_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    if (!res.ok) throw new Error('Login failed');
-    return res.json();
+    const { data } = await axiosInstance.post('/api/auth/login', { email, password });
+    return data;
   },
 
   register: async (name, email, password) => {
-    const res = await fetch(`${API_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password })
-    });
-    if (!res.ok) throw new Error('Registration failed');
-    return res.json();
+    const { data } = await axiosInstance.post('/api/auth/register', { name, email, password });
+    return data;
   },
 
   googleLogin: async (token) => {
-    const res = await fetch(`${API_URL}/api/auth/google`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
-    });
-    if (!res.ok) throw new Error('Google Login failed');
-    return res.json();
+    const { data } = await axiosInstance.post('/api/auth/google', { token });
+    return data;
   },
 
   getMe: async () => {
-    const res = await fetch(`${API_URL}/api/auth/me`, {
-      method: 'GET',
-      headers: { ...getAuthHeader() }
-    });
-    if (!res.ok) throw new Error('Failed to fetch user');
-    return res.json();
+    const { data } = await axiosInstance.get('/api/auth/me');
+    return data;
   },
 
-  // Interviews
-  createInterview: async (data) => {
-    const res = await fetch(`${API_URL}/api/interviews`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...getAuthHeader()
-      },
-      body: JSON.stringify(data)
-    });
-    return res.json();
+  createInterview: async (interviewData) => {
+    const { data } = await axiosInstance.post('/api/interviews', interviewData);
+    return data;
   },
 
   getMyInterviews: async () => {
-    const res = await fetch(`${API_URL}/api/interviews`, {
-      method: 'GET',
-      headers: { ...getAuthHeader() }
-    });
-    return res.json();
+    const { data } = await axiosInstance.get('/api/interviews');
+    return data;
   },
 
   getInterview: async (id) => {
-    const res = await fetch(`${API_URL}/api/interviews/${id}`, {
-      method: 'GET',
-      headers: { ...getAuthHeader() }
-    });
-    return res.json();
+    const { data } = await axiosInstance.get(`/api/interviews/${id}`);
+    return data;
   },
 
-  updateInterview: async (id, data) => {
-    const res = await fetch(`${API_URL}/api/interviews/${id}`, {
-      method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...getAuthHeader()
-      },
-      body: JSON.stringify(data)
-    });
-    return res.json();
+  updateInterview: async (id, updateData) => {
+    const { data } = await axiosInstance.put(`/api/interviews/${id}`, updateData);
+    return data;
   },
 
   deleteInterview: async (id) => {
-    const res = await fetch(`${API_URL}/api/interviews/${id}`, {
-      method: 'DELETE',
-      headers: { ...getAuthHeader() }
-    });
-    return res.json();
+    const { data } = await axiosInstance.delete(`/api/interviews/${id}`);
+    return data;
   },
 
-  // Admin
-  getAdminStats: async () => {
-    const res = await fetch(`${API_URL}/api/admin/stats`, {
-      method: 'GET',
-      headers: { ...getAuthHeader() }
+  uploadAudioRecording: async (interviewId, audioBlob, questionIndex, durationSeconds) => {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, `recording_q${questionIndex}.webm`);
+    formData.append('interviewId', interviewId);
+    formData.append('questionIndex', questionIndex);
+    formData.append('durationSeconds', durationSeconds || 0);
+
+    const { data } = await axiosInstance.post('/api/audio/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     });
-    if (!res.ok) throw new Error('Not authorized');
-    return res.json();
+    return data;
+  },
+
+  getAudioPlaybackUrl: async (interviewId, recordingId) => {
+    const { data } = await axiosInstance.get(`/api/audio/${interviewId}/${recordingId}`);
+    return data;
+  },
+
+  getAdminStats: async () => {
+    const { data } = await axiosInstance.get('/api/admin/stats');
+    return data;
   },
 
   getAllUsers: async () => {
-    const res = await fetch(`${API_URL}/api/admin/users`, {
-      method: 'GET',
-      headers: { ...getAuthHeader() }
-    });
-    if (!res.ok) throw new Error('Not authorized');
-    return res.json();
+    const { data } = await axiosInstance.get('/api/admin/users');
+    return data;
   },
 
-  // AI Proxy
+  getAllInterviews: async (page = 1, limit = 20, status = 'all', search = '') => {
+    const { data } = await axiosInstance.get('/api/admin/interviews', {
+      params: { page, limit, status, search }
+    });
+    return data;
+  },
+
+  getInterviewDetails: async (interviewId) => {
+    const { data } = await axiosInstance.get(`/api/admin/interviews/${interviewId}`);
+    return data;
+  },
+
+  getInterviewAudioRecordings: async (interviewId) => {
+    const { data } = await axiosInstance.get(`/api/audio/interview/${interviewId}`);
+    return data;
+  },
+
   chatStream: async (history, message, config, onChunk) => {
+    const token = localStorage.getItem('token');
     const payload = { history, message, ...config };
 
     const res = await fetch(`${API_URL}/api/ai/chat`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        ...getAuthHeader()
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
       },
       body: JSON.stringify(payload)
     });
@@ -143,26 +148,12 @@ export const api = {
   },
 
   generateFeedback: async (prompt, language) => {
-    const res = await fetch(`${API_URL}/api/ai/feedback`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-         ...getAuthHeader()
-      },
-      body: JSON.stringify({ prompt, language })
-    });
-    return res.json();
+    const { data } = await axiosInstance.post('/api/ai/feedback', { prompt, language });
+    return data;
   },
 
   generateSpeech: async (text) => {
-    const res = await fetch(`${API_URL}/api/ai/tts`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...getAuthHeader()
-      },
-      body: JSON.stringify({ text })
-    });
-    return res.json();
+    const { data } = await axiosInstance.post('/api/ai/tts', { text });
+    return data;
   }
 };

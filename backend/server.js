@@ -7,6 +7,7 @@ const authRoutes = require('./routes/authRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const audioRoutes = require('./routes/audioRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/interviews', interviewRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/audio', audioRoutes);
 
 // Health Check
 app.get('/', (req, res) => {
