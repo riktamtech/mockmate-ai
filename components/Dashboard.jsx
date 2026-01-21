@@ -111,7 +111,7 @@ export const Dashboard = ({ onStartNew, onResume, onViewReport, onMenuClick }) =
             </div>
             <Button 
               onClick={onStartNew} 
-              className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg"
+              className="bg-blue-30 text-blue-50 hover:bg-blue-50 shadow-lg"
             >
               <Plus size={20} className="mr-2" /> Start New Interview
             </Button>
