@@ -7,7 +7,8 @@ const {
   updateProfile,
   uploadResume,
   deleteResume,
-  completeProfileSetup
+  completeProfileSetup,
+  parseResume
 } = require('../controllers/userController');
 
 // Configure multer for memory storage
@@ -36,6 +37,7 @@ router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
 router.post('/profile/complete', protect, completeProfileSetup);
 router.post('/resume', protect, upload.single('resume'), uploadResume);
+router.post('/resume/parse', protect, upload.single('resume'), parseResume);
 router.delete('/resume', protect, deleteResume);
 
 module.exports = router;

@@ -78,6 +78,30 @@ const deleteAudio = async (key) => {
 };
 
 /**
+ * Upload a generic file to S3 with a custom key
+ * @param {Buffer} fileBuffer - The file buffer
+ * @param {string} key - The S3 object key (full path)
+ * @param {string} contentType - MIME type of the file
+ * @returns {Promise<string>} - The S3 object URL (not signed)
+ */
+const uploadFile = async (fileBuffer, key, contentType) => {
+  const command = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    Body: fileBuffer,
+    ContentType: contentType,
+    Metadata: {
+      uploadedAt: new Date().toISOString()
+    }
+  });
+
+  await s3Client.send(command);
+
+  // Return the base S3 URL (not signed)
+  return `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${key}`;
+};
+
+/**
  * Upload user response audio and return metadata
  * @param {Buffer} fileBuffer - Audio buffer
  * @param {string} mimeType - MIME type
@@ -101,6 +125,7 @@ const uploadResponseAudio = async (fileBuffer, mimeType, interviewId, questionIn
 
 module.exports = {
   uploadAudio,
+  uploadFile,
   getAudioUrl,
   deleteAudio,
   uploadResponseAudio,

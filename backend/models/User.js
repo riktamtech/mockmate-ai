@@ -52,6 +52,15 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  portfolioUrl: {
+    type: String,
+    default: ''
+  },
+  roleType: {
+    type: String,
+    enum: ['tech', 'non-tech', ''],
+    default: ''
+  },
   resumeUrl: {
     type: String,
     default: ''
