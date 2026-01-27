@@ -55,29 +55,38 @@ export const ResumeUpload = ({ onFileSelect, onBack, isLoading }) => {
   };
 
   const validateAndSetFile = (file) => {
-    // Basic validation for PDF or Image
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+    // Validation for PDF, DOC, DOCX and Images
+    const validTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+      'image/webp'
+    ];
     if (validTypes.includes(file.type)) {
       setSelectedFile(file);
     } else {
-      alert("Please upload a PDF or Image file.");
+      alert("Please upload a PDF, DOC, DOCX, or Image file.");
     }
   };
 
   const handleUpload = async () => {
     if (useExistingResume && !selectedFile) {
-      // If using existing resume, fetch and convert to File first
+      // If using existing resume, get base64 from backend
       try {
-        const response = await fetch(user.resumeSignedUrl || user.resumeUrl);
-        const blob = await response.blob();
+        const resumeData = await api.getResumeBase64();
         
-        const extension = user.resumeFileName.split('.').pop().toLowerCase();
-        let mimeType = 'application/pdf';
-        if (extension === 'jpg' || extension === 'jpeg') mimeType = 'image/jpeg';
-        if (extension === 'png') mimeType = 'image/png';
-        if (extension === 'webp') mimeType = 'image/webp';
+        // Convert base64 to File object
+        const byteCharacters = atob(resumeData.base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: resumeData.mimeType });
+        const file = new File([blob], resumeData.fileName, { type: resumeData.mimeType });
         
-        const file = new File([blob], user.resumeFileName, { type: mimeType });
         onFileSelect(file);
       } catch (err) {
         console.error('Error using existing resume:', err);
@@ -117,7 +126,7 @@ export const ResumeUpload = ({ onFileSelect, onBack, isLoading }) => {
           type="file" 
           className="hidden" 
           onChange={handleChange} 
-          accept=".pdf,.jpg,.jpeg,.png,.webp"
+          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
         />
 
         {/* Existing Resume Option */}
@@ -175,7 +184,7 @@ export const ResumeUpload = ({ onFileSelect, onBack, isLoading }) => {
                 </div>
                 <div>
                   <p className="font-medium text-slate-900">Click to upload or drag and drop</p>
-                  <p className="text-sm text-slate-500">PDF, PNG or JPG (max 5MB)</p>
+                  <p className="text-sm text-slate-500">PDF, DOC, DOCX, PNG or JPG (max 7MB)</p>
                 </div>
                 <Button variant="secondary" onClick={() => inputRef.current?.click()}>Select File</Button>
               </div>

@@ -66,7 +66,7 @@ export const Landing = ({ onSelectMode, totalQuestions, onTotalQuestionsChange }
                                     type="number"
                                     min="1"
                                     max="20"
-                                    value={totalQuestions || 10}
+                                    value={totalQuestions || 7}
                                     onChange={(e) => onTotalQuestionsChange(parseInt(e.target.value) || 10)}
                                     className="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-center"
                                 />
@@ -98,7 +98,7 @@ export const Landing = ({ onSelectMode, totalQuestions, onTotalQuestionsChange }
                         <div className="p-4 bg-purple-50 rounded-full mb-6 group-hover:bg-purple-100 group-hover:text-purple-600 text-purple-500 transition-colors">
                             <FileText size={32} />
                         </div>
-                        <h3 className="text-xl font-semibold mb-2 text-slate-900">Upload Resume</h3>
+                        <h3 className="text-xl font-semibold mb-2 text-slate-900">Based On Resume</h3>
                         <p className="text-sm text-slate-500 text-center">
                             Upload your resume. The AI will suggest roles and skills to practice based on your
                             profile.

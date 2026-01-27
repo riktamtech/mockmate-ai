@@ -77,6 +77,18 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailOtp: {
+    type: String,
+    default: ''
+  },
+  emailOtpExpiry: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

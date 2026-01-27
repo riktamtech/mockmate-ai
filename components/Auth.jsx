@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/Button';
 import { api } from '../services/api';
-import { Code2 } from 'lucide-react';
+import { Code2, Mail, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const Auth = ({ onLoginSuccess }) => {
@@ -11,6 +11,10 @@ export const Auth = ({ onLoginSuccess }) => {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showOtpScreen, setShowOtpScreen] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpSending, setOtpSending] = useState(false);
+  const [pendingUserData, setPendingUserData] = useState(null);
   const navigate = useNavigate();
 
   const navigateAfterAuth = (data, isNewRegistration = false) => {
@@ -72,22 +76,118 @@ export const Auth = ({ onLoginSuccess }) => {
     setLoading(true);
     try {
       let data;
-      let isNewRegistration = false;
       if (isLogin) {
         data = await api.login(email, password);
+        localStorage.setItem('token', data.token);
+        onLoginSuccess(data);
+        navigateAfterAuth(data, false);
       } else {
         data = await api.register(name, email, password);
-        isNewRegistration = true;
+        // Show OTP verification screen
+        setPendingUserData(data);
+        setShowOtpScreen(true);
       }
-      localStorage.setItem('token', data.token);
-      onLoginSuccess(data);
-      navigateAfterAuth(data, isNewRegistration);
     } catch (err) {
-      setError('Authentication failed. Please check credentials.');
+      setError(err.message || 'Authentication failed. Please check credentials.');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const data = await api.verifyOtp(email, otp);
+      localStorage.setItem('token', data.token);
+      onLoginSuccess(data);
+      navigateAfterAuth(data, true);
+    } catch (err) {
+      setError(err.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setOtpSending(true);
+    setError('');
+    try {
+      await api.sendOtp(email);
+      setError(''); // Clear any error
+      alert('OTP sent successfully!');
+    } catch (err) {
+      setError(err.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const handleBackToRegister = () => {
+    setShowOtpScreen(false);
+    setOtp('');
+    setPendingUserData(null);
+  };
+
+  // OTP Verification Screen
+  if (showOtpScreen) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+          <button 
+            onClick={handleBackToRegister}
+            className="flex items-center text-slate-500 hover:text-slate-700 mb-6"
+          >
+            <ArrowLeft size={18} className="mr-1" /> Back
+          </button>
+
+          <div className="flex flex-col items-center mb-8">
+            <div className="p-3 bg-emerald-50 rounded-xl mb-4 text-emerald-600">
+              <Mail size={32} />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">Verify Your Email</h1>
+            <p className="text-slate-500 text-center mt-2">
+              We've sent a 6-digit code to<br />
+              <span className="font-medium text-slate-700">{email}</span>
+            </p>
+          </div>
+
+          {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">{error}</div>}
+
+          <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Enter OTP</label>
+              <input 
+                type="text" 
+                value={otp} 
+                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="w-full p-3 text-center text-2xl tracking-widest border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="000000"
+                maxLength={6}
+                required 
+              />
+            </div>
+            
+            <Button type="submit" className="w-full" isLoading={loading} disabled={otp.length !== 6}>
+              Verify & Continue
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center text-sm">
+            <span className="text-slate-500">Didn't receive the code? </span>
+            <button 
+              onClick={handleResendOtp} 
+              disabled={otpSending}
+              className="text-blue-600 hover:underline disabled:opacity-50"
+            >
+              {otpSending ? 'Sending...' : 'Resend OTP'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">

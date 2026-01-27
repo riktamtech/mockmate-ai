@@ -497,15 +497,7 @@ export const ProfileSetup = () => {
                   className="hidden"
                 />
 
-                <div className="flex items-center justify-between pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className="text-slate-500 hover:text-slate-700 text-sm flex items-center gap-1"
-                  >
-                    <SkipForward size={14} />
-                    Skip, I'll fill manually
-                  </button>
+                <div className="flex items-center justify-end pt-4">
                   <Button 
                     type="button" 
                     onClick={handleNext}
@@ -688,16 +680,22 @@ export const ProfileSetup = () => {
                     {isTechRole ? 'Technical Skills' : 'Key Skills'}
                     {showExtractedBadge.skills && <ExtractedBadge />}
                   </label>
-                  <input
-                    type="text"
+                  <textarea
                     name="skills"
                     value={formData.skills}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                    onChange={(e) => {
+                      handleChange(e);
+                      // Auto-expand textarea
+                      e.target.style.height = 'auto';
+                      e.target.style.height = e.target.scrollHeight + 'px';
+                    }}
+                    rows={2}
+                    className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none overflow-hidden"
                     placeholder={isTechRole 
                       ? "e.g., JavaScript, React, Node.js, Python" 
                       : "e.g., Leadership, Communication, Project Management"
                     }
+                    style={{ minHeight: '60px' }}
                   />
                   <p className="text-xs text-slate-500 mt-1">Separate skills with commas</p>
                 </div>
@@ -786,19 +784,9 @@ export const ProfileSetup = () => {
                   >
                     ← Back
                   </button>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={handleSkip}
-                      disabled={loading}
-                      className="text-slate-500 hover:text-slate-700 text-sm"
-                    >
-                      Skip for now
-                    </button>
-                    <Button type="submit" isLoading={loading}>
-                      Complete Setup
-                    </Button>
-                  </div>
+                  <Button type="submit" isLoading={loading}>
+                    Complete Setup
+                  </Button>
                 </div>
               </div>
             )}

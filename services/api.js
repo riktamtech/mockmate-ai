@@ -42,6 +42,16 @@ export const api = {
     return data;
   },
 
+  sendOtp: async (email) => {
+    const { data } = await axiosInstance.post('/api/auth/send-otp', { email });
+    return data;
+  },
+
+  verifyOtp: async (email, otp) => {
+    const { data } = await axiosInstance.post('/api/auth/verify-otp', { email, otp });
+    return data;
+  },
+
   googleLogin: async (token) => {
     const { data } = await axiosInstance.post('/api/auth/google', { token });
     return data;
@@ -88,6 +98,11 @@ export const api = {
 
   parseExistingResume: async () => {
     const { data } = await axiosInstance.post('/api/user/resume/parse-existing');
+    return data;
+  },
+
+  getResumeBase64: async () => {
+    const { data } = await axiosInstance.get('/api/user/resume/base64');
     return data;
   },
 

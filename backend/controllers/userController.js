@@ -466,3 +466,61 @@ exports.completeProfileSetup = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Get existing resume as base64 (for interview flow)
+exports.getResumeBase64 = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.resumeS3Key) {
+      return res.status(400).json({ message: 'No resume found' });
+    }
+
+    // Get the resume from S3
+    const { GetObjectCommand, S3Client } = require('@aws-sdk/client-s3');
+    const s3Client = new S3Client({
+      region: process.env.AWS_REGION || 'us-east-1',
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+      }
+    });
+
+    const command = new GetObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET || 'mockmate-interviews',
+      Key: user.resumeS3Key
+    });
+
+    const response = await s3Client.send(command);
+    
+    // Convert stream to buffer
+    const chunks = [];
+    for await (const chunk of response.Body) {
+      chunks.push(chunk);
+    }
+    const fileBuffer = Buffer.concat(chunks);
+    
+    // Determine mime type from file extension
+    const extension = user.resumeS3Key.split('.').pop().toLowerCase();
+    let mimeType = 'application/pdf';
+    if (extension === 'doc') mimeType = 'application/msword';
+    if (extension === 'docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (extension === 'jpg' || extension === 'jpeg') mimeType = 'image/jpeg';
+    if (extension === 'png') mimeType = 'image/png';
+
+    // Convert to base64
+    const base64Data = fileBuffer.toString('base64');
+
+    res.json({
+      base64: base64Data,
+      mimeType,
+      fileName: user.resumeFileName
+    });
+  } catch (error) {
+    console.error('Get resume base64 error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};

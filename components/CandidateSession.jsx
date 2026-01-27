@@ -55,7 +55,7 @@ export const CandidateSession = () => {
 
   const navigate = useNavigate();
 
-  const [totalQuestions, setTotalQuestions] = useState(10);
+  const [totalQuestions, setTotalQuestions] = useState(7);
   const [messages, setMessages] = useState([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentQuestionCount, setCurrentQuestionCount] = useState(0);

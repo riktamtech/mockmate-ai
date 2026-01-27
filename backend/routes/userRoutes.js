@@ -9,7 +9,8 @@ const {
   deleteResume,
   completeProfileSetup,
   parseResume,
-  parseExistingResume
+  parseExistingResume,
+  getResumeBase64
 } = require('../controllers/userController');
 
 // Configure multer for memory storage
@@ -40,6 +41,7 @@ router.post('/profile/complete', protect, completeProfileSetup);
 router.post('/resume', protect, upload.single('resume'), uploadResume);
 router.post('/resume/parse', protect, upload.single('resume'), parseResume);
 router.post('/resume/parse-existing', protect, parseExistingResume);
+router.get('/resume/base64', protect, getResumeBase64);
 router.delete('/resume', protect, deleteResume);
 
 module.exports = router;
