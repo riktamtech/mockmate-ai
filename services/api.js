@@ -77,6 +77,20 @@ export const api = {
     return data;
   },
 
+  parseResume: async (file) => {
+    const formData = new FormData();
+    formData.append('resume', file);
+    const { data } = await axiosInstance.post('/api/user/resume/parse', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return data;
+  },
+
+  parseExistingResume: async () => {
+    const { data } = await axiosInstance.post('/api/user/resume/parse-existing');
+    return data;
+  },
+
   deleteResume: async () => {
     const { data } = await axiosInstance.delete('/api/user/resume');
     return data;
