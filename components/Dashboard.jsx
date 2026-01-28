@@ -53,7 +53,7 @@ const DashboardHeader = ({ onMenuClick }) => {
               </div>
               <div className="hidden sm:block text-left">
                 <p className="text-sm font-medium text-slate-700 leading-tight">{user?.name || 'User'}</p>
-                <p className="text-xs text-slate-500 leading-tight">{user?.experienceLevel || 'Candidate'}</p>
+                {/* <p className="text-xs text-slate-500 leading-tight">{user?.experienceLevel || 'Candidate'}</p> */}
               </div>
             </button>
           </div>
