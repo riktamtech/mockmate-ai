@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { chatStream, generateFeedback, generateSpeech } = require('../controllers/aiController');
+const { chatStream, generateFeedback, generateSpeech, analyzeResume } = require('../controllers/aiController');
 const { protect } = require('../middleware/authMiddleware');
 
 // Public or Protected? Protected usually, but for demo we can leave public or wrap with protect.
@@ -8,5 +8,6 @@ const { protect } = require('../middleware/authMiddleware');
 router.post('/chat', protect, chatStream);
 router.post('/feedback', protect, generateFeedback);
 router.post('/tts', protect, generateSpeech);
+router.post('/analyze-resume', protect, analyzeResume);
 
 module.exports = router;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { Button } from './ui/Button';
-import { Play, FileText, Trash2, Loader2, Plus, Code2, Bell, Search } from 'lucide-react';
+import { Play, FileText, Trash2, Loader2, Plus, Code2, Bell, Search, Briefcase, UserCircle } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 
 // Dashboard Header Component
@@ -63,7 +63,7 @@ const DashboardHeader = ({ onMenuClick }) => {
   );
 };
 
-export const Dashboard = ({ onStartNew, onResume, onViewReport, onMenuClick }) => {
+export const Dashboard = ({ onStartNew, onResume, onViewReport, onMenuClick, onSelectMode }) => {
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -151,13 +151,55 @@ export const Dashboard = ({ onStartNew, onResume, onViewReport, onMenuClick }) =
             <Loader2 className="animate-spin text-blue-500" size={40} />
           </div>
         ) : interviews.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 shadow-sm">
-            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-400">
-              <FileText size={40} />
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">Start Your First Interview</h3>
+              <p className="text-slate-500">Choose how you'd like to practice</p>
             </div>
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">No Interviews Yet</h3>
-            <p className="text-slate-500 mb-8">Start your first mock interview to see it here.</p>
-            <Button onClick={onStartNew}>Create Interview</Button>
+            
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Option 1: Job Description */}
+              <button
+                onClick={() => onSelectMode?.("jd")}
+                className="group relative flex flex-col items-center p-8 bg-white hover:bg-slate-50 border border-slate-200 hover:border-blue-400 rounded-2xl transition-all shadow-sm hover:shadow-xl hover:shadow-blue-500/10 text-left"
+              >
+                <div className="p-4 bg-blue-50 rounded-full mb-6 group-hover:bg-blue-100 group-hover:text-blue-600 text-blue-500 transition-colors">
+                  <Briefcase size={32} />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-slate-900 text-center">Job Description Based</h3>
+                <p className="text-sm text-slate-500 text-center">
+                  Paste a JD and let the AI extract requirements to grill you on specifics.
+                </p>
+              </button>
+
+              {/* Option 2: Resume Upload */}
+              <button
+                onClick={() => onSelectMode?.("resume")}
+                className="group relative flex flex-col items-center p-8 bg-white hover:bg-slate-50 border border-slate-200 hover:border-purple-400 rounded-2xl transition-all shadow-sm hover:shadow-xl hover:shadow-purple-500/10 text-left"
+              >
+                <div className="p-4 bg-purple-50 rounded-full mb-6 group-hover:bg-purple-100 group-hover:text-purple-600 text-purple-500 transition-colors">
+                  <FileText size={32} />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-slate-900 text-center">Resume Based</h3>
+                <p className="text-sm text-slate-500 text-center">
+                  Upload your resume. The AI will suggest roles and skills to practice.
+                </p>
+              </button>
+
+              {/* Option 3: General Role */}
+              <button
+                onClick={() => onSelectMode?.("role")}
+                className="group relative flex flex-col items-center p-8 bg-white hover:bg-slate-50 border border-slate-200 hover:border-emerald-400 rounded-2xl transition-all shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 text-left"
+              >
+                <div className="p-4 bg-emerald-50 rounded-full mb-6 group-hover:bg-emerald-100 group-hover:text-emerald-600 text-emerald-500 transition-colors">
+                  <UserCircle size={32} />
+                </div>
+                <h3 className="text-xl font-semibold mb-2 text-slate-900 text-center">Practice for a Role</h3>
+                <p className="text-sm text-slate-500 text-center">
+                  Mention a role and the AI will customize the session for you.
+                </p>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid gap-4">

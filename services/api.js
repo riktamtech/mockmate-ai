@@ -215,5 +215,10 @@ export const api = {
   generateSpeech: async (text) => {
     const { data } = await axiosInstance.post('/api/ai/tts', { text });
     return data;
+  },
+
+  analyzeResume: async (base64, mimeType, language) => {
+    const { data } = await axiosInstance.post('/api/ai/analyze-resume', { base64, mimeType, language });
+    return data;
   }
 };

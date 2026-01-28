@@ -79,17 +79,13 @@ export const createResumeCoordinatorChat = (language = 'English') => {
     maxOutputTokens: 1024,
     language,
     systemInstruction: `You are an expert Career Coach and Interview Coordinator.
-The user has uploaded their resume. Your goal is to:
-1. Quickly identify their top 2-3 strongest skills and potential roles.
-2. Propose 2-3 interview scenarios they could practice for.
-3. Help them choose ONE specific path for the mock interview.
+The user has already had their resume analyzed. You have been provided with a structured analysis of their resume.
+Your job now is to help them select ONE specific interview role and focus area from the suggested options.
 
-IMPORTANT: Keep your response BRIEF and CONVERSATIONAL (under 150 words). 
-- Do NOT list every skill or experience from the resume
-- Do NOT provide a detailed analysis or summary
-- Just identify key strengths and suggest interview options
-
-Once the user confirms the specific Role and Focus Area they want to practice, output:
+Instructions:
+- Keep responses BRIEF and CONVERSATIONAL (under 100 words).
+- If the user picks a role, confirm it and ask for any specific focus or level adjustments.
+- Once they confirm a specific Role, Focus Area, and Level, output:
 \`\`\`json
 { "READY": true, "role": "...", "focusArea": "...", "level": "..." }
 \`\`\`
@@ -97,21 +93,73 @@ Once the user confirms the specific Role and Focus Area they want to practice, o
   });
 };
 
-export const sendResumeToChat = async (chat, fileBase64, mimeType) => {
-  let fullText = "";
+// Format the structured resume analysis into a conversational message
+export const formatResumeAnalysis = (analysis) => {
+  const { greeting, strengthsSummary, suggestedRoles, suggestion } = analysis;
   
-  const messagePart = {
-    parts: [
-      { inlineData: { mimeType, data: fileBase64 } },
-      { text: "Here is my resume. Please analyze it, tell me what roles I am best suited for, and let's choose one for a mock interview." }
-    ]
-  };
-
-  await sendMessageStream(chat, messagePart, (chunk) => {
-    fullText += chunk;
+  let message = `${greeting} ${strengthsSummary}\n\n`;
+  message += `Based on your background, I suggest we practice for one of these roles:\n\n`;
+  
+  suggestedRoles.forEach((role, index) => {
+    message += `**${index + 1}. ${role.role}**: ${role.reason} *(Focus: ${role.focusArea})*\n\n`;
   });
+  
+  message += `${suggestion}`;
+  
+  return message;
+};
 
-  return fullText;
+// Analyze resume using structured function calling
+export const analyzeResumeStructured = async (fileBase64, mimeType, language = 'English') => {
+  const analysis = await api.analyzeResume(fileBase64, mimeType, language);
+  return analysis;
+};
+
+// Legacy function - now uses structured analysis
+export const sendResumeToChat = async (chat, fileBase64, mimeType, language = 'English') => {
+  try {
+    // Use the new structured analysis endpoint
+    const analysis = await analyzeResumeStructured(fileBase64, mimeType, language);
+    
+    // Format the analysis into a nice conversational message
+    const formattedMessage = formatResumeAnalysis(analysis);
+    
+    // Store the analysis in the chat session for later use
+    chat.resumeAnalysis = analysis;
+    
+    // Add to chat history so the coordinator knows the context
+    chat.history.push({
+      role: 'user',
+      parts: [
+        { inlineData: { mimeType, data: fileBase64 } },
+        { text: "Here is my resume. Please analyze it." }
+      ]
+    });
+    
+    chat.history.push({
+      role: 'model',
+      parts: [{ text: formattedMessage }]
+    });
+    
+    return { text: formattedMessage, analysis };
+  } catch (error) {
+    console.error("Error in structured resume analysis:", error);
+    // Fallback to old streaming method if structured analysis fails
+    let fullText = "";
+    
+    const messagePart = {
+      parts: [
+        { inlineData: { mimeType, data: fileBase64 } },
+        { text: "Here is my resume. Please analyze it briefly, identify my top 2-3 strengths, and suggest 2-3 interview roles I could practice for. Keep it concise." }
+      ]
+    };
+
+    await sendMessageStream(chat, messagePart, (chunk) => {
+      fullText += chunk;
+    });
+
+    return { text: fullText, analysis: null };
+  }
 };
 
 // --- Interviewer ---

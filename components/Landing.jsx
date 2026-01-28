@@ -84,7 +84,7 @@ export const Landing = ({ onSelectMode, totalQuestions, onTotalQuestionsChange }
                         <div className="p-4 bg-blue-50 rounded-full mb-6 group-hover:bg-blue-100 group-hover:text-blue-600 text-blue-500 transition-colors">
                             <Briefcase size={32} />
                         </div>
-                        <h3 className="text-xl font-semibold mb-2 text-slate-900">Paste Job Description</h3>
+                        <h3 className="text-xl font-semibold mb-2 text-slate-900">Interview Based On Job Description</h3>
                         <p className="text-sm text-slate-500 text-center">
                             Paste a JD and let the AI extract requirements to grill you on specifics.
                         </p>

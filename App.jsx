@@ -70,6 +70,17 @@ const DashboardWrapper = () => {
         navigate('/mockmate/candidate/practice');
     };
 
+    const handleSelectMode = (mode) => {
+        if (mode === 'jd') {
+            setAppState(AppState.SETUP_JD);
+        } else if (mode === 'resume') {
+            setAppState(AppState.SETUP_RESUME);
+        } else if (mode === 'role') {
+            setAppState(AppState.SETUP_ROLE_CHAT);
+        }
+        navigate('/mockmate/candidate/practice');
+    };
+
     const handleResume = (interview) => {
         setActiveInterviewId(interview._id);
         navigate('/mockmate/candidate/practice');
@@ -92,6 +103,7 @@ const DashboardWrapper = () => {
                 onResume={handleResume} 
                 onViewReport={handleViewReport}
                 onMenuClick={() => setIsDrawerOpen(true)}
+                onSelectMode={handleSelectMode}
             />
         </div>
     );

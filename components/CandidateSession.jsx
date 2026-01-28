@@ -63,6 +63,7 @@ export const CandidateSession = () => {
   const [resumeContext, setResumeContext] = useState(null);
   const [isResuming, setIsResuming] = useState(!!activeInterviewId);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
   const startTimeRef = useRef(Date.now());
   
   const chatSessionRef = useRef(null);
@@ -84,6 +85,13 @@ export const CandidateSession = () => {
     };
     initSession();
   }, [activeInterviewId]);
+
+  // Start coordinator chat when entering SETUP_ROLE_CHAT from dashboard
+  useEffect(() => {
+    if (appState === AppState.SETUP_ROLE_CHAT && !chatSessionRef.current && !activeInterviewId) {
+      startCoordinatorChat();
+    }
+  }, [appState]);
 
   const resumeInterview = async (interview) => {
      setActiveInterviewId(interview._id);
@@ -180,9 +188,17 @@ export const CandidateSession = () => {
       const systemMsgId = generateId();
       setMessages([{ id: systemMsgId, role: 'model', text: 'Analyzing resume...', timestamp: new Date(), isThinking: true }]);
       
-      const responseText = await sendResumeToChat(chat, base64, file.type);
+      const result = await sendResumeToChat(chat, base64, file.type, language);
       
+      // Handle the new structured response format
+      const responseText = result.text || result;
       setMessages(prev => prev.map(m => m.id === systemMsgId ? { ...m, text: responseText, isThinking: false } : m));
+      
+      // Store the analysis if available and generate suggestions
+      if (result.analysis) {
+        chatSessionRef.current.resumeAnalysis = result.analysis;
+        generateContextualSuggestions(responseText, result.analysis);
+      }
       
     } catch (err) {
       console.error(err);
@@ -194,6 +210,101 @@ export const CandidateSession = () => {
     }
   };
 
+  // Analyze AI message and generate contextual suggestions
+  const generateContextualSuggestions = (aiMessage, analysis = null) => {
+    const lowerMessage = aiMessage.toLowerCase();
+    const newSuggestions = [];
+
+    // Check if AI is asking about roles (after resume analysis)
+    if (analysis?.suggestedRoles && (
+      lowerMessage.includes('which one') || 
+      lowerMessage.includes('which role') ||
+      lowerMessage.includes('choose one') ||
+      lowerMessage.includes('select one') ||
+      lowerMessage.includes('practice for')
+    )) {
+      analysis.suggestedRoles.forEach((role, index) => {
+        newSuggestions.push({
+          label: `${index + 1}. ${role.role}`,
+          value: `I'd like to practice for the ${role.role} role, focusing on ${role.focusArea}.`
+        });
+      });
+    }
+    // Check if AI is asking about experience level
+    else if (
+      lowerMessage.includes('experience level') || 
+      lowerMessage.includes('seniority') ||
+      lowerMessage.includes('how many years') ||
+      lowerMessage.includes('what level')
+    ) {
+      newSuggestions.push(
+        { label: 'Entry Level / Fresher', value: 'I am at entry level / fresher.' },
+        { label: 'Junior (1-2 years)', value: 'I have 1-2 years of experience, junior level.' },
+        { label: 'Mid-Level (3-5 years)', value: 'I have 3-5 years of experience, mid-level.' },
+        { label: 'Senior (5+ years)', value: 'I have 5+ years of experience, senior level.' }
+      );
+    }
+    // Check if AI is asking for confirmation
+    else if (
+      lowerMessage.includes('ready to start') ||
+      lowerMessage.includes('shall we begin') ||
+      lowerMessage.includes('start the interview') ||
+      lowerMessage.includes('proceed with') ||
+      lowerMessage.includes('is that correct') ||
+      lowerMessage.includes('sound good')
+    ) {
+      newSuggestions.push(
+        { label: "Yes, let's start!", value: "Yes, let's start the interview!" },
+        { label: 'I want to change something', value: 'Actually, I want to change the role or focus area.' }
+      );
+    }
+    // Check if AI is asking about role/position
+    else if (
+      lowerMessage.includes('what role') ||
+      lowerMessage.includes('what position') ||
+      lowerMessage.includes('practicing for') ||
+      lowerMessage.includes('interviewing for')
+    ) {
+      newSuggestions.push(
+        { label: 'Frontend Developer', value: 'I want to practice for a Frontend Developer role.' },
+        { label: 'Backend Developer', value: 'I want to practice for a Backend Developer role.' },
+        { label: 'Full-Stack Developer', value: 'I want to practice for a Full-Stack Developer role.' },
+        { label: 'Software Engineer', value: 'I want to practice for a Software Engineer role.' }
+      );
+    }
+    // Check if AI is asking about focus area / tech stack
+    else if (
+      lowerMessage.includes('focus area') ||
+      lowerMessage.includes('tech stack') ||
+      lowerMessage.includes('technologies') ||
+      lowerMessage.includes('skills') ||
+      lowerMessage.includes('speciali')
+    ) {
+      newSuggestions.push(
+        { label: 'React / Frontend', value: 'Focus on React, JavaScript, and frontend development.' },
+        { label: 'Node.js / Backend', value: 'Focus on Node.js, Express, and backend development.' },
+        { label: 'MERN Stack', value: 'Focus on the MERN stack (MongoDB, Express, React, Node.js).' },
+        { label: 'System Design', value: 'Focus on system design and architecture.' },
+        { label: 'DSA & Problem Solving', value: 'Focus on data structures, algorithms, and problem solving.' }
+      );
+    }
+
+    setSuggestions(newSuggestions);
+  };
+
+  // Get current suggestions for display
+  const getSuggestionChips = () => {
+    if (appState !== AppState.SETUP_RESUME_CHAT && appState !== AppState.SETUP_ROLE_CHAT) return [];
+    return suggestions;
+  };
+
+  // Handle when user clicks a suggestion chip
+  const handleSuggestionClick = (suggestion) => {
+    setSuggestions([]); // Clear suggestions after clicking
+    const message = typeof suggestion === 'string' ? suggestion : suggestion.value;
+    handleCoordinatorMessage(message);
+  };
+
   const startCoordinatorChat = async () => {
     const chat = createCoordinatorChat(language);
     chatSessionRef.current = chat;
@@ -203,15 +314,21 @@ export const CandidateSession = () => {
     const initialMsgId = generateId();
     setMessages([{ id: initialMsgId, role: 'model', text: '', timestamp: new Date(), isThinking: true }]);
 
+    let fullResponse = "";
     await sendMessageStream(chat, `Hello, I want to practice for an interview in ${language}.`, (chunk) => {
+      fullResponse = chunk;
       setMessages(prev => prev.map(m => m.id === initialMsgId ? { ...m, text: chunk, isThinking: false } : m));
     });
     setIsStreaming(false);
+    
+    // Generate suggestions based on initial AI response
+    generateContextualSuggestions(fullResponse);
   };
 
   const handleCoordinatorMessage = async (text) => {
     if (!chatSessionRef.current) return;
 
+    setSuggestions([]); // Clear suggestions when user sends a message
     const userMsg = { id: generateId(), role: 'user', text, timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
     setIsStreaming(true);
@@ -226,6 +343,10 @@ export const CandidateSession = () => {
     });
 
     setIsStreaming(false);
+
+    // Generate new contextual suggestions based on AI response
+    const analysis = chatSessionRef.current?.resumeAnalysis;
+    generateContextualSuggestions(fullResponse, analysis);
 
     let jsonMatch = fullResponse.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
     if (!jsonMatch) {
@@ -521,6 +642,8 @@ export const CandidateSession = () => {
           onBack={handleBackToLanding}
           placeholder="Answer the coordinator..."
           mode="text"
+          suggestions={getSuggestionChips()}
+          onSuggestionClick={handleSuggestionClick}
         />
       )}
 

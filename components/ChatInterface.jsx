@@ -19,6 +19,8 @@ export const ChatInterface = ({
     currentQuestion,
     totalQuestions,
     onPlayAudio,
+    suggestions = [],
+    onSuggestionClick,
 }) => {
     const [activeInputMode, setActiveInputMode] = useState(mode);
     const [input, setInput] = useState("");
@@ -175,8 +177,26 @@ export const ChatInterface = ({
                 <div ref={messagesEndRef} />
             </div>
 
+            {/* Suggestion Chips */}
+            {suggestions.length > 0 && !isStreaming && (
+                <div className="px-4 md:px-6 pt-3 pb-2 bg-white border-t border-slate-100">
+                    <p className="text-xs text-slate-400 mb-2 font-medium">Quick replies</p>
+                    <div className="flex flex-wrap gap-2">
+                        {suggestions.map((suggestion, index) => (
+                            <button
+                                key={index}
+                                onClick={() => onSuggestionClick?.(suggestion)}
+                                className="px-4 py-2 text-sm bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-full border border-slate-200 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow"
+                            >
+                                {suggestion.label || suggestion}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Input Area */}
-            <div className="p-4 md:p-6 bg-white border-t border-slate-200 transition-all duration-300">
+            <div className={`p-4 md:p-6 bg-white ${suggestions.length === 0 || isStreaming ? 'border-t border-slate-200' : ''} transition-all duration-300`}>
                 {activeInputMode === "audio" && onSendAudio ? (
                     <div className="flex flex-col items-center justify-center py-4 relative">
                         <AudioRecorder
