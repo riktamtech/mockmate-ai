@@ -62,10 +62,11 @@ const ProtectedAdminRoute = ({ children }) => {
 
 const DashboardWrapper = () => {
     const navigate = useNavigate();
-    const { setAppState, setActiveInterviewId, setFeedbackData } = useAppStore();
+    const { setAppState, setActiveInterviewId, setFeedbackData, resetSession } = useAppStore();
     const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
     const handleStartNew = () => {
+        resetSession();
         setAppState(AppState.LANDING); 
         navigate('/mockmate/candidate/practice');
     };

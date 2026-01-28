@@ -689,7 +689,7 @@ export const ProfileSetup = () => {
                       e.target.style.height = 'auto';
                       e.target.style.height = e.target.scrollHeight + 'px';
                     }}
-                    rows={2}
+                    rows={3}
                     className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none overflow-hidden"
                     placeholder={isTechRole 
                       ? "e.g., JavaScript, React, Node.js, Python" 
