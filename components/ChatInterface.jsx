@@ -66,11 +66,11 @@ export const ChatInterface = ({
         currentQuestion && totalQuestions ? Math.min((currentQuestion / totalQuestions) * 100, 100) : 0;
 
     return (
-        <div className="flex flex-col h-screen max-w-4xl mx-auto bg-slate-50 relative shadow-xl shadow-slate-200/50">
-            {/* Header */}
-            <header className="flex flex-col border-b border-slate-200 bg-white/80 backdrop-blur sticky top-0 z-10">
-                <div className="flex items-center justify-between px-6 py-4">
-                    <div className="flex items-center gap-3">
+        <div className="flex h-screen w-full bg-slate-100">
+            {/* Left Sidebar - Interview Info */}
+            <aside className="hidden lg:flex flex-col w-72 xl:w-80 bg-white border-r border-slate-200 flex-shrink-0">
+                <div className="p-6 border-b border-slate-100">
+                    <div className="flex items-center gap-3 mb-4">
                         {showBackButton && (
                             <button
                                 onClick={onBack}
@@ -81,73 +81,137 @@ export const ChatInterface = ({
                         )}
                         <div>
                             <h1 className="text-lg font-bold text-slate-800 tracking-tight">{title}</h1>
-                            <p className="text-xs text-slate-500 flex items-center gap-1">
+                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                                 {mode === "audio" && (
-                                    <Volume2
-                                        size={12}
-                                        className="text-blue-500"
-                                    />
+                                    <Volume2 size={12} className="text-blue-500" />
                                 )}
-                                <span
-                                    className={`w-2 h-2 rounded-full ${mode === "audio" ? "bg-blue-500" : "bg-emerald-500"} animate-pulse`}
-                                ></span>
+                                <span className={`w-2 h-2 rounded-full ${mode === "audio" ? "bg-blue-500" : "bg-emerald-500"} animate-pulse`}></span>
                                 {mode === "audio" ? "Voice Session" : "Live Chat"}
                             </p>
                         </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                        {currentQuestion && totalQuestions && (
-                            <div className="hidden md:flex flex-col items-end mr-4">
-                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                                    <Target size={12} /> Progress
-                                </span>
-                                <span className="text-sm font-bold text-slate-800">
-                                    Question {currentQuestion} / {totalQuestions}
-                                </span>
-                            </div>
-                        )}
-
-                        {onSaveExit && (
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={onSaveExit}
-                                className="flex items-center gap-2"
-                            >
-                                <Save size={16} />
-                                <span className="hidden md:inline">Save & Exit</span>
-                            </Button>
-                        )}
-
-                        {onEndSession && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={onEndSession}
-                                className="flex items-center gap-2 border-red-200 text-red-600 hover:bg-red-50"
-                            >
-                                <StopCircle size={16} />
-                                <span className="hidden md:inline">End Interview</span>
-                                <span className="md:hidden">End</span>
-                            </Button>
-                        )}
-                    </div>
                 </div>
 
-                {/* Progress Bar */}
+                {/* Progress Section */}
                 {currentQuestion && totalQuestions && (
-                    <div className="w-full bg-slate-100 h-1">
-                        <div
-                            className="bg-blue-600 h-1 transition-all duration-500 ease-out"
-                            style={{ width: `${progressPercentage}%` }}
-                        ></div>
+                    <div className="p-6 border-b border-slate-100">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Target size={16} className="text-blue-600" />
+                            <span className="text-sm font-semibold text-slate-700">Interview Progress</span>
+                        </div>
+                        <div className="bg-slate-100 rounded-full h-3 mb-2 overflow-hidden">
+                            <div
+                                className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
+                                style={{ width: `${progressPercentage}%` }}
+                            ></div>
+                        </div>
+                        <p className="text-sm text-slate-600">
+                            Question <span className="font-bold text-blue-600">{currentQuestion}</span> of <span className="font-bold">{totalQuestions}</span>
+                        </p>
                     </div>
                 )}
-            </header>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto px-4 py-6 md:px-6 space-y-2 scroll-smooth bg-slate-50">
+                {/* Tips Section */}
+                <div className="p-6 flex-1">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3">💡 Quick Tips</h3>
+                    <ul className="space-y-2 text-xs text-slate-500">
+                        <li className="flex items-start gap-2">
+                            <span className="text-blue-500 mt-0.5">•</span>
+                            Take your time to structure your answers
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="text-blue-500 mt-0.5">•</span>
+                            Use the STAR method for behavioral questions
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span className="text-blue-500 mt-0.5">•</span>
+                            Ask clarifying questions if needed
+                        </li>
+                    </ul>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="p-4 border-t border-slate-100 space-y-2">
+                    {onSaveExit && (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={onSaveExit}
+                            className="flex items-center justify-center gap-2 w-full"
+                        >
+                            <Save size={16} />
+                            Save & Exit
+                        </Button>
+                    )}
+                    {onEndSession && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={onEndSession}
+                            className="flex items-center justify-center gap-2 w-full border-red-200 text-red-600 hover:bg-red-50"
+                        >
+                            <StopCircle size={16} />
+                            End Interview
+                        </Button>
+                    )}
+                </div>
+            </aside>
+
+            {/* Main Chat Area */}
+            <div className="flex flex-col flex-1 min-w-0 bg-slate-50">
+                {/* Mobile Header */}
+                <header className="lg:hidden flex flex-col border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-10">
+                    <div className="flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-3">
+                            {showBackButton && (
+                                <button
+                                    onClick={onBack}
+                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600"
+                                >
+                                    <ArrowLeft size={20} />
+                                </button>
+                            )}
+                            <div>
+                                <h1 className="text-base font-bold text-slate-800">{title}</h1>
+                                <p className="text-xs text-slate-500 flex items-center gap-1">
+                                    <span className={`w-2 h-2 rounded-full ${mode === "audio" ? "bg-blue-500" : "bg-emerald-500"} animate-pulse`}></span>
+                                    {mode === "audio" ? "Voice" : "Chat"}
+                                    {currentQuestion && totalQuestions && (
+                                        <span className="ml-2">• Q{currentQuestion}/{totalQuestions}</span>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {onSaveExit && (
+                                <Button variant="secondary" size="sm" onClick={onSaveExit}>
+                                    <Save size={16} />
+                                </Button>
+                            )}
+                            {onEndSession && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={onEndSession}
+                                    className="border-red-200 text-red-600 hover:bg-red-50"
+                                >
+                                    <StopCircle size={16} />
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                    {currentQuestion && totalQuestions && (
+                        <div className="w-full bg-slate-100 h-1">
+                            <div
+                                className="bg-blue-600 h-1 transition-all duration-500 ease-out"
+                                style={{ width: `${progressPercentage}%` }}
+                            ></div>
+                        </div>
+                    )}
+                </header>
+
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 lg:px-12 xl:px-16 space-y-2 scroll-smooth">
                 {messages.length === 0 && (
                     <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-80">
                         <p>
@@ -174,91 +238,92 @@ export const ChatInterface = ({
                         </div>
                     </div>
                 )}
-                <div ref={messagesEndRef} />
-            </div>
-
-            {/* Suggestion Chips */}
-            {suggestions.length > 0 && !isStreaming && (
-                <div className="px-4 md:px-6 pt-3 pb-2 bg-white border-t border-slate-100">
-                    <p className="text-xs text-slate-400 mb-2 font-medium">Quick replies</p>
-                    <div className="flex flex-wrap gap-2">
-                        {suggestions.map((suggestion, index) => (
-                            <button
-                                key={index}
-                                onClick={() => onSuggestionClick?.(suggestion)}
-                                className="px-4 py-2 text-sm bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-full border border-slate-200 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow"
-                            >
-                                {suggestion.label || suggestion}
-                            </button>
-                        ))}
-                    </div>
+                    <div ref={messagesEndRef} />
                 </div>
-            )}
 
-            {/* Input Area */}
-            <div className={`p-4 md:p-6 bg-white ${suggestions.length === 0 || isStreaming ? 'border-t border-slate-200' : ''} transition-all duration-300`}>
-                {activeInputMode === "audio" && onSendAudio ? (
-                    <div className="flex flex-col items-center justify-center py-4 relative">
-                        <AudioRecorder
-                            onRecordingComplete={onSendAudio}
-                            disabled={isStreaming}
-                            isProcessing={isStreaming}
-                        />
-                        {enableTextInput && (
-                            <button
-                                onClick={() => setActiveInputMode("text")}
-                                className="mt-4 flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
-                                disabled={isStreaming}
-                            >
-                                <Keyboard size={18} />
-                                Type response instead
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <div className="relative">
-                        <form
-                            onSubmit={handleSubmit}
-                            className="relative max-w-4xl mx-auto flex items-end gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200 focus-within:border-blue-500 focus-within:bg-white focus-within:shadow-md transition-all"
-                        >
-                            <textarea
-                                ref={inputRef}
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder={placeholder}
-                                disabled={isStreaming}
-                                className="w-full bg-transparent text-slate-800 placeholder-slate-400 text-base p-3 focus:outline-none resize-none max-h-32 min-h-[52px]"
-                                rows={1}
-                                style={{ height: "auto", minHeight: "52px" }}
-                                onInput={(e) => {
-                                    const target = e.target;
-                                    target.style.height = "auto";
-                                    target.style.height = `${Math.min(target.scrollHeight, 150)}px`;
-                                }}
-                            />
-                            <button
-                                type="submit"
-                                disabled={!input.trim() || isStreaming}
-                                className="p-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed rounded-lg text-white transition-all shadow-md shadow-blue-500/20 mb-[1px]"
-                            >
-                                <Send size={20} />
-                            </button>
-                        </form>
-                        {onSendAudio && (
-                            <div className="flex justify-center mt-3">
+                {/* Suggestion Chips */}
+                {suggestions.length > 0 && !isStreaming && (
+                    <div className="px-4 md:px-8 lg:px-12 xl:px-16 pt-3 pb-2 bg-white border-t border-slate-100">
+                        <p className="text-xs text-slate-400 mb-2 font-medium">Quick replies</p>
+                        <div className="flex flex-wrap gap-2">
+                            {suggestions.map((suggestion, index) => (
                                 <button
-                                    onClick={() => setActiveInputMode("audio")}
-                                    className="flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
-                                    disabled={isStreaming}
+                                    key={index}
+                                    onClick={() => onSuggestionClick?.(suggestion)}
+                                    className="px-4 py-2 text-sm bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 rounded-full border border-slate-200 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow"
                                 >
-                                    <Mic size={18} />
-                                    Switch to Voice
+                                    {suggestion.label || suggestion}
                                 </button>
-                            </div>
-                        )}
+                            ))}
+                        </div>
                     </div>
                 )}
+
+                {/* Input Area */}
+                <div className={`px-4 md:px-8 lg:px-12 xl:px-16 py-4 bg-white ${suggestions.length === 0 || isStreaming ? 'border-t border-slate-200' : ''} transition-all duration-300`}>
+                    {activeInputMode === "audio" && onSendAudio ? (
+                        <div className="flex flex-col items-center justify-center py-4 relative">
+                            <AudioRecorder
+                                onRecordingComplete={onSendAudio}
+                                disabled={isStreaming}
+                                isProcessing={isStreaming}
+                            />
+                            {enableTextInput && (
+                                <button
+                                    onClick={() => setActiveInputMode("text")}
+                                    className="mt-4 flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
+                                    disabled={isStreaming}
+                                >
+                                    <Keyboard size={18} />
+                                    Type response instead
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="relative max-w-4xl">
+                            <form
+                                onSubmit={handleSubmit}
+                                className="relative flex items-end gap-3 bg-slate-50 p-2 rounded-2xl border border-slate-200 focus-within:border-blue-500 focus-within:bg-white focus-within:shadow-lg transition-all"
+                            >
+                                <textarea
+                                    ref={inputRef}
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder={placeholder}
+                                    disabled={isStreaming}
+                                    className="w-full bg-transparent text-slate-800 placeholder-slate-400 text-base p-3 focus:outline-none resize-none max-h-32 min-h-[52px]"
+                                    rows={1}
+                                    style={{ height: "auto", minHeight: "52px" }}
+                                    onInput={(e) => {
+                                        const target = e.target;
+                                        target.style.height = "auto";
+                                        target.style.height = `${Math.min(target.scrollHeight, 150)}px`;
+                                    }}
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={!input.trim() || isStreaming}
+                                    className="p-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed rounded-xl text-white transition-all shadow-md shadow-blue-500/20 mb-[1px]"
+                                >
+                                    <Send size={20} />
+                                </button>
+                            </form>
+                            {onSendAudio && (
+                                <div className="flex justify-center mt-3">
+                                    <button
+                                        onClick={() => setActiveInputMode("audio")}
+                                        className="flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
+                                        disabled={isStreaming}
+                                    >
+                                        <Mic size={18} />
+                                        Switch to Voice
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

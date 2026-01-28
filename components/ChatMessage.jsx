@@ -15,20 +15,20 @@ export const ChatMessage = ({ message, onPlayAudio }) => {
   };
   
   return (
-    <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`flex max-w-[85%] md:max-w-[75%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-3`}>
+    <div className={`flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div className={`flex max-w-[90%] md:max-w-[80%] lg:max-w-[70%] ${isUser ? 'flex-row-reverse' : 'flex-row'} gap-3`}>
         {/* Avatar */}
-        <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center shadow-sm ${isUser ? 'bg-blue-600' : 'bg-emerald-600'}`}>
-          {isUser ? <User size={20} className="text-white" /> : <Bot size={20} className="text-white" />}
+        <div className={`flex-shrink-0 h-9 w-9 md:h-10 md:w-10 rounded-full flex items-center justify-center shadow-sm ${isUser ? 'bg-gradient-to-br from-blue-500 to-blue-600' : 'bg-gradient-to-br from-emerald-500 to-emerald-600'}`}>
+          {isUser ? <User size={18} className="text-white" /> : <Bot size={18} className="text-white" />}
         </div>
 
         {/* Bubble */}
         <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
           <div 
-            className={`px-5 py-3.5 rounded-2xl shadow-sm text-sm md:text-base leading-relaxed overflow-hidden
+            className={`px-4 py-3 md:px-5 md:py-3.5 rounded-2xl shadow-sm text-sm md:text-base leading-relaxed overflow-hidden
               ${isUser 
-                ? 'bg-blue-600 text-white rounded-tr-sm' 
-                : 'bg-white text-slate-800 rounded-tl-sm border border-slate-200'
+                ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-tr-md' 
+                : 'bg-white text-slate-800 rounded-tl-md border border-slate-200/80'
               }`}
           >
             {message.isThinking ? (

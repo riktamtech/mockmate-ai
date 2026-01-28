@@ -331,10 +331,10 @@ export const ProfileSetup = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6 text-white">
+    <div className="h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4 overflow-hidden">
+      <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl border border-slate-100 flex flex-col max-h-[95vh] overflow-hidden">
+        {/* Header - Fixed */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6 text-white flex-shrink-0">
           <h1 className="text-2xl font-bold">Complete Your Profile</h1>
           <p className="text-blue-100 mt-1">Help us personalize your interview experience</p>
           
@@ -351,17 +351,18 @@ export const ProfileSetup = () => {
           </div>
         </div>
 
-        <div className="p-8">
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto p-8">
           {error && (
             <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-lg text-sm flex items-center gap-2">
               <X size={16} /> {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="flex flex-col h-full">
             {/* Step 1: Resume Upload */}
             {step === 1 && (
-              <div className="space-y-6">
+              <div className="space-y-6 flex-1">
                 <div className="text-center mb-6">
                   <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <FileText className="text-blue-600" size={28} />
@@ -496,23 +497,12 @@ export const ProfileSetup = () => {
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-
-                <div className="flex items-center justify-end pt-4">
-                  <Button 
-                    type="button" 
-                    onClick={handleNext}
-                    disabled={parsingResume}
-                  >
-                    {(resume || useExistingResume) ? 'Continue' : 'Continue without resume'}
-                    <ArrowRight size={16} className="ml-2" />
-                  </Button>
-                </div>
               </div>
             )}
 
             {/* Step 2: Basic Info */}
             {step === 2 && (
-              <div className="space-y-6">
+              <div className="space-y-6 flex-1">
                 {/* Verification notice if data was extracted */}
                 {Object.keys(showExtractedBadge).length > 0 && (
                   <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
@@ -594,26 +584,12 @@ export const ProfileSetup = () => {
                     ))}
                   </div>
                 </div>
-
-                <div className="flex justify-between pt-4">
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    className="text-slate-600 hover:text-slate-800 font-medium"
-                  >
-                    ← Back
-                  </button>
-                  <Button type="button" onClick={handleNext}>
-                    Next Step
-                    <ArrowRight size={16} className="ml-2" />
-                  </Button>
-                </div>
               </div>
             )}
 
             {/* Step 3: Professional Details */}
             {step === 3 && (
-              <div className="space-y-6">
+              <div className="space-y-6 flex-1">
                 {/* Verification notice if data was extracted */}
                 {Object.keys(showExtractedBadge).length > 0 && (
                   <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
@@ -774,23 +750,55 @@ export const ProfileSetup = () => {
                     />
                   </div>
                 </div>
-
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    className="text-slate-600 hover:text-slate-800 font-medium"
-                  >
-                    ← Back
-                  </button>
-                  <Button type="submit" isLoading={loading}>
-                    Complete Setup
-                  </Button>
-                </div>
               </div>
             )}
           </form>
+        </div>
+
+        {/* Fixed Footer with Navigation Buttons */}
+        <div className="flex-shrink-0 px-8 py-4 bg-white border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            {step === 1 ? (
+              <>
+                <div></div>
+                <Button 
+                  type="button" 
+                  onClick={handleNext}
+                  disabled={parsingResume}
+                >
+                  {(resume || useExistingResume) ? 'Continue' : 'Continue without resume'}
+                  <ArrowRight size={16} className="ml-2" />
+                </Button>
+              </>
+            ) : step === 2 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="text-slate-600 hover:text-slate-800 font-medium"
+                >
+                  ← Back
+                </button>
+                <Button type="button" onClick={handleNext}>
+                  Next Step
+                  <ArrowRight size={16} className="ml-2" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="text-slate-600 hover:text-slate-800 font-medium"
+                >
+                  ← Back
+                </button>
+                <Button onClick={handleSubmit} isLoading={loading}>
+                  Complete Setup
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
