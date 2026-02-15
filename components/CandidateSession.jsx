@@ -845,7 +845,7 @@ export const CandidateSession = () => {
           onSendAudio={handleInterviewAudio}
           onPlayAudio={handlePlayAudio}
           isStreaming={isStreaming}
-          onEndSession={handleEndInterview}
+          onEndSession={() => handleEndInterview()}
           onSaveExit={handleSaveAndExit}
           placeholder="Type your answer or use microphone..."
           mode="audio"
