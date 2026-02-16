@@ -38,6 +38,10 @@ import { useAppStore } from "../../store/useAppStore";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
+const Skeleton = ({ className }) => (
+  <div className={`animate-pulse bg-slate-200 rounded ${className}`} />
+);
+
 const StatsCard = ({
   icon: Icon,
   label,
@@ -201,7 +205,42 @@ const AdminDashboard = () => {
   };
 
   const renderStats = () => {
-    if (!stats) return null;
+    if (!stats) {
+      return (
+        <div className="space-y-6">
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4"
+              >
+                <Skeleton className="h-12 w-12 rounded-xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Charts Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[...Array(2)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-80 flex flex-col"
+              >
+                <Skeleton className="h-6 w-48 mb-4" />
+                <div className="flex-1 w-full relative">
+                  <Skeleton className="absolute inset-0 rounded-xl" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
 
     const pieData = Object.entries(stats.interviewsByStatus || {}).map(
       ([name, value]) => ({
@@ -462,11 +501,31 @@ const AdminDashboard = () => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading ? (
-              <tr>
-                <td colSpan="6" className="p-8 text-center">
-                  <Loader2 className="animate-spin text-blue-500 mx-auto" />
-                </td>
-              </tr>
+              [...Array(5)].map((_, i) => (
+                <tr key={i} className="animate-pulse">
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0"></div>
+                      <div className="h-4 w-32 bg-slate-200 rounded"></div>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="h-4 w-48 bg-slate-200 rounded"></div>
+                  </td>
+                  <td className="p-4">
+                    <div className="h-6 w-12 bg-slate-200 rounded-lg"></div>
+                  </td>
+                  <td className="p-4">
+                    <div className="h-4 w-24 bg-slate-200 rounded"></div>
+                  </td>
+                  <td className="p-4">
+                    <div className="h-4 w-16 bg-slate-200 rounded"></div>
+                  </td>
+                  <td className="p-4 text-right">
+                    <div className="h-7 w-24 bg-slate-200 rounded-lg ml-auto"></div>
+                  </td>
+                </tr>
+              ))
             ) : users.length === 0 ? (
               <tr>
                 <td colSpan="6" className="p-8 text-center text-slate-500">
