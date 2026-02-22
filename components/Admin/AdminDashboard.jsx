@@ -18,6 +18,7 @@ import {
   Zap,
   Coins,
   X,
+  MessageSquare,
 } from "lucide-react";
 import {
   PieChart,
@@ -35,6 +36,7 @@ import {
   Area,
 } from "recharts";
 import { useAppStore } from "../../store/useAppStore";
+import InterviewDetailModal from "./InterviewDetailModal";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
@@ -97,8 +99,13 @@ const AdminDashboard = () => {
   const viewMode = selectedUserId ? "user-details" : "dashboard";
 
   const [selectedUser, setSelectedUser] = useState(null);
+
   const [selectedUserInterviews, setSelectedUserInterviews] = useState([]);
   const [visiblePageStart, setVisiblePageStart] = useState(1);
+  const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false);
+  const [selectedInterviewDetails, setSelectedInterviewDetails] =
+    useState(null);
+  const [transcriptLoadingId, setTranscriptLoadingId] = useState(null);
 
   useEffect(() => {
     // only fetch stats/users if we are in dashboard mode
@@ -202,6 +209,22 @@ const AdminDashboard = () => {
 
   const handleUserView = (userId) => {
     setSearchParams({ userId });
+  };
+
+  const handleViewTranscript = async (interviewId) => {
+    try {
+      setTranscriptLoadingId(interviewId);
+      // Open modal immediately with null data to show skeleton
+      setSelectedInterviewDetails(null);
+      setIsTranscriptModalOpen(true);
+
+      const data = await api.getInterviewDetails(interviewId);
+      setSelectedInterviewDetails(data);
+    } catch (error) {
+      console.error("Failed to fetch interview details", error);
+    } finally {
+      setTranscriptLoadingId(null);
+    }
   };
 
   const renderStats = () => {
@@ -774,8 +797,9 @@ const AdminDashboard = () => {
                         Questions
                       </span>
                       {interview.history
-                        ? Math.floor(interview.history.length / 2)
-                        : "-"}
+                        ? interview.history.filter((m) => m.role === "model")
+                            .length
+                        : 0}
                     </div>
                   </div>
                 </div>
@@ -795,6 +819,19 @@ const AdminDashboard = () => {
                       <FileText size={16} /> View Report
                     </button>
                   )}
+
+                  <button
+                    onClick={() => handleViewTranscript(interview._id)}
+                    disabled={transcriptLoadingId === interview._id}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm shadow-blue-200 disabled:opacity-75 disabled:cursor-not-allowed"
+                  >
+                    {transcriptLoadingId === interview._id ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : (
+                      <MessageSquare size={16} />
+                    )}
+                    Transcript
+                  </button>
                 </div>
               </div>
             ))
@@ -841,6 +878,13 @@ const AdminDashboard = () => {
           renderUserDetails()
         )}
       </main>
+
+      <InterviewDetailModal
+        isOpen={isTranscriptModalOpen}
+        onClose={() => setIsTranscriptModalOpen(false)}
+        interview={selectedInterviewDetails}
+        isLoading={!!transcriptLoadingId}
+      />
     </div>
   );
 };

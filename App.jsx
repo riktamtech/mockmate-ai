@@ -19,6 +19,8 @@ import { Code2, ArrowRight } from "lucide-react";
 import { SideDrawer } from "./components/SideDrawer";
 import { MenuButton } from "./components/MenuButton";
 import { api } from "./services/api";
+import { ForgotPassword } from "./components/ForgotPassword";
+import { ResetPassword } from "./components/ResetPassword";
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -153,6 +155,13 @@ export default function App() {
         <Route
           path="/mockmate/login"
           element={<Auth onLoginSuccess={(u) => setUser(u)} />}
+        />
+
+        <Route path="/mockmate/forgot-password" element={<ForgotPassword />} />
+
+        <Route
+          path="/mockmate/reset-password/:resettoken"
+          element={<ResetPassword />}
         />
 
         {/* Candidate Routes */}

@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
+const crypto = require("crypto");
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -69,9 +70,11 @@ exports.registerUser = async (req, res) => {
       emailOtp: otp,
       emailOtpExpiry: otpExpiry,
       emailVerified: false,
+      provider: "email",
       isTestUser:
-        req.get("host").includes("localhost") ||
-        req.get("host").includes("127.0.0.1"),
+        process.env.NODE_ENV &&
+        (process.env.NODE_ENV === "development" ||
+          process.env.NODE_ENV === "local"),
     });
 
     // Send OTP email
@@ -220,6 +223,10 @@ exports.loginUser = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (user && (await user.matchPassword(password))) {
+      if (!user.emailVerified) {
+        return res.status(403).json({ message: "Email not verified" });
+      }
+
       res.json({
         _id: user._id,
         name: user.name,
@@ -275,12 +282,14 @@ exports.googleLogin = async (req, res) => {
       user = await User.create({
         name,
         email,
+        provider: "google",
         password:
           Math.random().toString(36).slice(-8) +
           Math.random().toString(36).slice(-8),
         isTestUser:
-          req.get("host").includes("localhost") ||
-          req.get("host").includes("127.0.0.1"),
+          process.env.NODE_ENV &&
+          (process.env.NODE_ENV === "development" ||
+            process.env.NODE_ENV === "local"),
       });
     }
 
@@ -296,5 +305,118 @@ exports.googleLogin = async (req, res) => {
   } catch (error) {
     console.error("Google Auth Error:", error);
     res.status(401).json({ message: "Google authentication failed" });
+  }
+};
+
+// Forgot Password
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Get reset token
+    const resetToken = user.getResetPasswordToken();
+
+    await user.save({ validateBeforeSave: false });
+
+    // Create reset url
+    // For local dev, assuming frontend is on 5173. In prod, this should be env var.
+    const frontendUrl =
+      process.env.NODE_ENV === "production"
+        ? "https://mi.zinterview.ai/mockmate/"
+        : "http://localhost:5173/mockmate";
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+
+    const message = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+        <h2 style="color: #2563eb;">Password Reset Request</h2>
+         <p>Hi ${user.name},</p>
+        <p>You are receiving this email because you (or someone else) has requested the reset of a password. Please click the button below to reset your password:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
+        </div>
+        <p>If you requested this reset, please ignore this email.</p>
+        <p style="color: #64748b; font-size: 14px; margin-top: 20px;">Or copy and paste this link into your browser:<br> <a href="${resetUrl}">${resetUrl}</a></p>
+      </div>
+    `;
+
+    try {
+      await sendEmail(user.email, "Password Reset Request", message);
+
+      res.status(200).json({ success: true, data: "Email sent" });
+    } catch (err) {
+      console.error(err);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+
+      await user.save({ validateBeforeSave: false });
+
+      return res.status(500).json({ message: "Email could not be sent" });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Reset Password
+exports.resetPassword = async (req, res) => {
+  // Get hashed token
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(req.params.resettoken)
+    .digest("hex");
+
+  try {
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    // Set new password
+    user.password = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    // Send confirmation email
+    try {
+      const frontendUrl =
+        process.env.NODE_ENV === "production"
+          ? "https://mi.zinterview.ai/mockmate/"
+          : "http://localhost:5173/mockmate";
+      const message = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+          <h2 style="color: #2563eb;">Password Changed Successfully</h2>
+          <p>Hi ${user.name},</p>
+          <p>This is a confirmation that the password for your account ${user.email} has just been changed.</p>
+          <div style="text-align: center; margin: 30px 0;">
+             <a href="${frontendUrl}/login" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Login Now</a>
+          </div>
+        </div>
+      `;
+      await sendEmail(user.email, "Password Changed Successfully", message);
+    } catch (emailErr) {
+      console.error("Confirmation email failed:", emailErr);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: "Password updated success",
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
   }
 };

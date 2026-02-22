@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// const API_URL = 'http://localhost:5001';
-const API_URL = '';
+const API_URL = "http://localhost:5001";
+// const API_URL = '';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
@@ -26,7 +26,9 @@ axiosInstance.interceptors.response.use(
   (error) => {
     const message =
       error.response?.data?.message || error.message || "Request failed";
-    return Promise.reject(new Error(message));
+    const newError = new Error(message);
+    newError.response = error.response;
+    return Promise.reject(newError);
   },
 );
 
@@ -60,6 +62,23 @@ export const api = {
       email,
       otp,
     });
+    return data;
+  },
+
+  forgotPassword: async (email) => {
+    const { data } = await axiosInstance.post("/api/auth/forgotpassword", {
+      email,
+    });
+    return data;
+  },
+
+  resetPassword: async (resettoken, password) => {
+    const { data } = await axiosInstance.put(
+      `/api/auth/resetpassword/${resettoken}`,
+      {
+        password,
+      },
+    );
     return data;
   },
 
@@ -164,16 +183,36 @@ export const api = {
     audioBlob,
     questionIndex,
     durationSeconds,
+    transcript,
+    historyId = null,
+    interactionId = null,
   ) => {
     const formData = new FormData();
     formData.append("audio", audioBlob, `recording_q${questionIndex}.webm`);
     formData.append("interviewId", interviewId);
     formData.append("questionIndex", questionIndex);
     formData.append("durationSeconds", durationSeconds || 0);
+    if (transcript) formData.append("transcript", transcript);
+    if (historyId) formData.append("historyId", historyId);
+    if (interactionId) formData.append("interactionId", interactionId);
 
     const { data } = await axiosInstance.post("/api/audio/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    return data;
+  },
+
+  transcribeAudio: async (audioBlob) => {
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "recording.webm");
+
+    const { data } = await axiosInstance.post(
+      "/api/audio/transcribe",
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      },
+    );
     return data;
   },
 
@@ -225,6 +264,23 @@ export const api = {
     return data;
   },
 
+  transcribeInterview: async (interviewId, payload) => {
+    // payload can be { historyIds: [...] } or { transcriptions: {...} }
+    const { data } = await axiosInstance.post(
+      `/api/admin/interviews/${interviewId}/transcribe`,
+      payload,
+    );
+    return data;
+  },
+
+  generateTtsForHistory: async (interviewId, historyId) => {
+    const { data } = await axiosInstance.post(
+      `/api/admin/interviews/${interviewId}/tts-fallback`,
+      { historyId },
+    );
+    return data;
+  },
+
   getInterviewAudioRecordings: async (interviewId) => {
     const { data } = await axiosInstance.get(
       `/api/audio/interview/${interviewId}`,
@@ -232,7 +288,7 @@ export const api = {
     return data;
   },
 
-  chatStream: async (history, message, config, onChunk) => {
+  chatStream: async (history, message, config, onChunk, onMetadata) => {
     const token = localStorage.getItem("token");
     const payload = { history, message, ...config };
 
@@ -249,17 +305,51 @@ export const api = {
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder("utf-8", { fatal: false });
-    let buffer = "";
+    let accumulated = "";
+    let processedLength = 0;
+    let metadataFound = false;
 
     while (true) {
       const { value, done } = await reader.read();
       if (done) {
-        if (buffer) onChunk(buffer);
+        // flush anything remaining before \n[METADATA]
+        const metaIdx = accumulated.lastIndexOf("\n[METADATA]");
+        if (metaIdx !== -1) {
+          const remainder = accumulated.slice(processedLength, metaIdx);
+          if (remainder.length > 0) onChunk(remainder);
+
+          const metaStr = accumulated.slice(metaIdx + 11);
+          try {
+            const metadata = JSON.parse(metaStr);
+            if (onMetadata) onMetadata(metadata);
+          } catch (_) {}
+        } else {
+          const remainder = accumulated.slice(processedLength);
+          if (remainder.length > 0) onChunk(remainder);
+        }
         break;
       }
+
       const text = decoder.decode(value, { stream: true });
       if (text) {
-        onChunk(text);
+        accumulated += text;
+        if (metadataFound) continue;
+
+        const metaIdx = accumulated.indexOf("\n[METADATA]");
+        if (metaIdx !== -1) {
+          metadataFound = true;
+          const remainder = accumulated.slice(processedLength, metaIdx);
+          if (remainder.length > 0) onChunk(remainder);
+          processedLength = metaIdx;
+        } else {
+          // Keep 11 chars buffered in case it's the start of \n[METADATA]
+          const safeLength = Math.max(0, accumulated.length - 11);
+          if (safeLength > processedLength) {
+            const chunkToEmit = accumulated.slice(processedLength, safeLength);
+            onChunk(chunkToEmit);
+            processedLength = safeLength;
+          }
+        }
       }
     }
   },
@@ -273,8 +363,35 @@ export const api = {
     return data;
   },
 
-  generateSpeech: async (text) => {
-    const { data } = await axiosInstance.post("/api/ai/tts", { text });
+  generateSpeech: async (
+    text,
+    interviewId = null,
+    questionIndex = null,
+    language = "English",
+  ) => {
+    const payload = { text, interviewId, questionIndex, language };
+    const { data } = await axiosInstance.post("/api/ai/tts", payload);
+    return data;
+  },
+
+  refreshAudioUrl: async (
+    interviewId,
+    questionIndex,
+    conversationId = null,
+  ) => {
+    const { data } = await axiosInstance.post("/api/ai/refresh-audio-url", {
+      interviewId,
+      questionIndex,
+      conversationId,
+    });
+    return data;
+  },
+
+  generateSpeechGeminiBackup: async (text, language = "English") => {
+    const { data } = await axiosInstance.post("/api/ai/tts-gemini-backup", {
+      text,
+      language,
+    });
     return data;
   },
 
@@ -285,5 +402,37 @@ export const api = {
       language,
     });
     return data;
+  },
+
+  ttsStream: async (
+    text,
+    interviewId = null,
+    questionIndex = null,
+    signal,
+    isFinalMessage = false,
+    historyId = null,
+    language = "English",
+  ) => {
+    const token = localStorage.getItem("token");
+    const payload = {
+      text,
+      interviewId,
+      questionIndex,
+      isFinalMessage,
+      historyId,
+      language,
+    };
+
+    // We use native fetch here because axios doesn't support streaming response bodies easily in browser
+    const response = await fetch(`${API_URL}/api/ai/tts`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+      signal,
+    });
+    return response;
   },
 };

@@ -17,7 +17,7 @@ exports.getProfile = async (req, res) => {
     let resumeSignedUrl = null;
     if (user.resumeS3Key) {
       try {
-        resumeSignedUrl = await getAudioUrl(user.resumeS3Key, 3600);
+        resumeSignedUrl = await getAudioUrl(user.resumeS3Key, 86400);
       } catch (err) {
         console.error('Error generating resume URL:', err);
       }
@@ -134,7 +134,7 @@ exports.uploadResume = async (req, res) => {
     await user.save();
 
     // Generate signed URL for immediate use
-    const signedUrl = await getAudioUrl(s3Key, 3600);
+    const signedUrl = await getAudioUrl(s3Key, 86400);
 
     res.json({
       message: 'Resume uploaded successfully',
@@ -275,7 +275,7 @@ IMPORTANT: Return ONLY valid JSON, no markdown, no explanation.`
     }
 
     // Generate signed URL for immediate use
-    const signedUrl = await getAudioUrl(s3Key, 3600);
+    const signedUrl = await getAudioUrl(s3Key, 86400);
 
     res.json({
       message: 'Resume parsed successfully',
