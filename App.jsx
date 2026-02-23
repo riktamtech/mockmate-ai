@@ -6,6 +6,7 @@ import {
   Navigate,
   useNavigate,
 } from "react-router-dom";
+import LogRocket from "logrocket";
 import { useAppStore } from "./store/useAppStore";
 import { Auth } from "./components/Auth";
 import { Dashboard } from "./components/Dashboard";
@@ -19,6 +20,8 @@ import { Code2, ArrowRight } from "lucide-react";
 import { SideDrawer } from "./components/SideDrawer";
 import { MenuButton } from "./components/MenuButton";
 import { api } from "./services/api";
+import { ForgotPassword } from "./components/ForgotPassword";
+import { ResetPassword } from "./components/ResetPassword";
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -134,6 +137,11 @@ export default function App() {
           .getMe()
           .then((user) => {
             setUser(user);
+            LogRocket.identify(user._id, {
+              name: user.name,
+              email: user.email,
+              isAdmin: user.isAdmin,
+            });
           })
           .catch(() => {
             localStorage.removeItem("token");
@@ -152,7 +160,25 @@ export default function App() {
 
         <Route
           path="/mockmate/login"
-          element={<Auth onLoginSuccess={(u) => setUser(u)} />}
+          element={
+            <Auth
+              onLoginSuccess={(u) => {
+                setUser(u);
+                LogRocket.identify(u._id, {
+                  name: u.name,
+                  email: u.email,
+                  isAdmin: u.isAdmin,
+                });
+              }}
+            />
+          }
+        />
+
+        <Route path="/mockmate/forgot-password" element={<ForgotPassword />} />
+
+        <Route
+          path="/mockmate/reset-password/:resettoken"
+          element={<ResetPassword />}
         />
 
         {/* Candidate Routes */}

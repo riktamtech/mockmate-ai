@@ -18,6 +18,7 @@ import {
   Zap,
   Coins,
   X,
+  MessageSquare,
 } from "lucide-react";
 import {
   PieChart,
@@ -35,6 +36,7 @@ import {
   Area,
 } from "recharts";
 import { useAppStore } from "../../store/useAppStore";
+import InterviewDetailModal from "./InterviewDetailModal";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
@@ -97,8 +99,13 @@ const AdminDashboard = () => {
   const viewMode = selectedUserId ? "user-details" : "dashboard";
 
   const [selectedUser, setSelectedUser] = useState(null);
+
   const [selectedUserInterviews, setSelectedUserInterviews] = useState([]);
   const [visiblePageStart, setVisiblePageStart] = useState(1);
+  const [isTranscriptModalOpen, setIsTranscriptModalOpen] = useState(false);
+  const [selectedInterviewDetails, setSelectedInterviewDetails] =
+    useState(null);
+  const [transcriptLoadingId, setTranscriptLoadingId] = useState(null);
 
   useEffect(() => {
     // only fetch stats/users if we are in dashboard mode
@@ -202,6 +209,22 @@ const AdminDashboard = () => {
 
   const handleUserView = (userId) => {
     setSearchParams({ userId });
+  };
+
+  const handleViewTranscript = async (interviewId) => {
+    try {
+      setTranscriptLoadingId(interviewId);
+      // Open modal immediately with null data to show skeleton
+      setSelectedInterviewDetails(null);
+      setIsTranscriptModalOpen(true);
+
+      const data = await api.getInterviewDetails(interviewId);
+      setSelectedInterviewDetails(data);
+    } catch (error) {
+      console.error("Failed to fetch interview details", error);
+    } finally {
+      setTranscriptLoadingId(null);
+    }
   };
 
   const renderStats = () => {
@@ -744,57 +767,76 @@ const AdminDashboard = () => {
             selectedUserInterviews.map((interview) => (
               <div
                 key={interview._id}
-                className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row justify-between items-center gap-4"
+                className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-2"
               >
-                <div>
-                  <h4 className="font-bold text-lg text-slate-900">
-                    {interview.role}
-                  </h4>
-                  <p className="text-sm text-slate-500">
-                    {interview.focusArea} • {interview.level} •{" "}
-                    {new Date(interview.date).toLocaleDateString()}
-                  </p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-sm text-slate-500 w-full">
-                    <div>
-                      <span className="block text-xs uppercase text-slate-400 font-semibold">
-                        Language
-                      </span>
-                      {interview.language || "English"}
-                    </div>
-                    <div>
-                      <span className="block text-xs uppercase text-slate-400 font-semibold">
-                        Duration
-                      </span>
-                      {interview.durationSeconds
-                        ? `${Math.round(interview.durationSeconds / 60)} mins`
-                        : "-"}
-                    </div>
-                    <div>
-                      <span className="block text-xs uppercase text-slate-400 font-semibold">
-                        Questions
-                      </span>
-                      {interview.history
-                        ? Math.floor(interview.history.length / 2)
-                        : "-"}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h4 className="font-bold text-lg text-slate-900">
+                      {interview.role}
+                    </h4>
+                    <p className="text-sm text-slate-500">
+                      {interview.focusArea} • {interview.level} •{" "}
+                      {new Date(interview.date).toLocaleDateString()}
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-sm text-slate-500 w-full">
+                      <div>
+                        <span className="block text-xs uppercase text-slate-400 font-semibold">
+                          Language
+                        </span>
+                        {interview.language || "English"}
+                      </div>
+                      <div>
+                        <span className="block text-xs uppercase text-slate-400 font-semibold">
+                          Duration
+                        </span>
+                        {interview.durationSeconds
+                          ? `${Math.round(interview.durationSeconds / 60)} mins`
+                          : "-"}
+                      </div>
+                      <div>
+                        <span className="block text-xs uppercase text-slate-400 font-semibold">
+                          Questions
+                        </span>
+                        {interview.history
+                          ? interview.history.filter((m) => m.role === "model")
+                              .length
+                          : 0}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wide
-                      ${interview.status === "COMPLETED" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}
-                  >
-                    {interview.status.replace("_", " ")}
-                  </span>
-
-                  {interview.status === "COMPLETED" && interview.feedback && (
-                    <button
-                      onClick={() => handleViewReport(interview.feedback)}
-                      className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors text-sm font-medium"
+                  <div className="flex flex-wrap items-center gap-3 shrink-0">
+                    <span
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wide
+                        ${interview.status === "COMPLETED" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}
                     >
-                      <FileText size={16} /> View Report
+                      {interview.status.replace("_", " ")}
+                    </span>
+
+                    {interview.status === "COMPLETED" && interview.feedback && (
+                      <button
+                        onClick={() => handleViewReport(interview.feedback)}
+                        className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors text-sm font-medium"
+                      >
+                        <FileText size={16} /> View Report
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => handleViewTranscript(interview._id)}
+                      disabled={transcriptLoadingId === interview._id}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm shadow-blue-200 disabled:opacity-75 disabled:cursor-not-allowed"
+                    >
+                      {transcriptLoadingId === interview._id ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        <MessageSquare size={16} />
+                      )}
+                      Transcript
                     </button>
-                  )}
+                  </div>
+                </div>
+                <div className="text-[11px] text-slate-400 mt-2">
+                  ID: {interview._id}
                 </div>
               </div>
             ))
@@ -841,6 +883,13 @@ const AdminDashboard = () => {
           renderUserDetails()
         )}
       </main>
+
+      <InterviewDetailModal
+        isOpen={isTranscriptModalOpen}
+        onClose={() => setIsTranscriptModalOpen(false)}
+        interview={selectedInterviewDetails}
+        isLoading={!!transcriptLoadingId}
+      />
     </div>
   );
 };

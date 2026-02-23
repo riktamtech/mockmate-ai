@@ -7,13 +7,14 @@ import {
   PlayCircle,
   FileText,
   Settings,
-  ChartNoAxesCombined
+  ChartNoAxesCombined,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppStore } from "../store/useAppStore";
+import { AppState } from "../types";
 
 export const SideDrawer = ({ isOpen, onClose }) => {
-  const { user, setUser, resetSession } = useAppStore();
+  const { user, setUser, resetSession, setAppState } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -27,6 +28,10 @@ export const SideDrawer = ({ isOpen, onClose }) => {
   };
 
   const handleNavigation = (path) => {
+    if (path === "/mockmate/candidate/practice") {
+      resetSession();
+      setAppState(AppState.LANDING);
+    }
     navigate(path);
     onClose();
   };

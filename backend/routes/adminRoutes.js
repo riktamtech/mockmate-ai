@@ -9,6 +9,9 @@ const {
   getAllInterviews,
   getInterviewDetails,
   getUserGrowth,
+  transcribeInterviewAudio,
+  proxyAudioStream,
+  generateTtsForHistory,
 } = require("../controllers/adminController");
 
 router.use(protect);
@@ -20,5 +23,8 @@ router.route("/users").get(getUsers);
 router.route("/users/:id").get(getUserDetails);
 router.route("/interviews").get(getAllInterviews);
 router.route("/interviews/:id").get(getInterviewDetails);
+router.route("/interviews/:id/transcribe").post(transcribeInterviewAudio);
+router.route("/interviews/:id/tts-fallback").post(generateTtsForHistory);
+router.route("/interviews/:id/audio/:questionIndex").get(proxyAudioStream);
 
 module.exports = router;

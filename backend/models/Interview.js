@@ -11,14 +11,59 @@ const AudioRecordingSchema = new mongoose.Schema(
       default: "audio/webm",
     },
     questionIndex: {
-      type: Number,
-      required: true,
+      type: Number, // Kept for backward compatibility, no longer required
     },
     durationSeconds: {
       type: Number,
       default: 0,
     },
     uploadedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    interactionId: {
+      type: String, // Primary linking ID: bridges history item and audio recording
+    },
+    historyId: {
+      type: String, // MongoDB _id of the corresponding history message
+    },
+  },
+  { _id: true },
+);
+
+// ── Embedded Message Schema (replaces Conversation collection) ──────
+const MessageSchema = new mongoose.Schema(
+  {
+    role: {
+      type: String,
+      enum: ["user", "model"],
+      required: true,
+    },
+    content: {
+      type: String,
+      default: "",
+    },
+    audioS3Key: {
+      type: String, // S3 object key for audio (user recording or AI TTS)
+    },
+    audioMimeType: {
+      type: String, // MIME type of audio (e.g., "audio/webm", "audio/mp3")
+    },
+    audioDurationSeconds: {
+      type: Number,
+      default: 0,
+    },
+    questionIndex: {
+      type: Number, // Which question this message corresponds to
+    },
+    metadata: {
+      type: Map,
+      of: String, // Extensible metadata (e.g., transcriptionSource, model)
+    },
+    interactionId: {
+      type: String, // Unique frontend-generated ID linking to AudioRecording and S3
+    },
+    timestamp: {
       type: Date,
       default: Date.now,
     },
@@ -42,26 +87,18 @@ const InterviewSchema = new mongoose.Schema({
     type: String,
     default: "English",
   },
+  totalQuestions: {
+    type: Number,
+    default: 7,
+  },
   status: {
     type: String,
     enum: ["IN_PROGRESS", "COMPLETED", "ARCHIVED"],
     default: "IN_PROGRESS",
   },
-  history: [
-    {
-      role: String,
-      parts: [
-        {
-          text: String,
-          inlineData: {
-            mimeType: String,
-            data: String,
-          },
-        },
-      ],
-    },
-  ],
-  audioRecordings: [AudioRecordingSchema],
+  // history: [mongoose.Schema.Types.Mixed], // Supports legacy object structure AND new ObjectId references
+  history: [MessageSchema],
+  audioRecordings: [AudioRecordingSchema], // Kept for backward compatibility
   date: {
     type: Date,
     default: Date.now,
