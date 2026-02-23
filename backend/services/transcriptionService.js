@@ -13,7 +13,7 @@ const TRANSCRIPTION_MODEL = "gemini-2.0-flash-lite"; // Fastest model for STT
 // ─── Constants ───────────────────────────────────────────────────────
 const MIN_AUDIO_SIZE = 512; // 512 bytes — anything smaller is likely empty/noise
 const MAX_AUDIO_SIZE = 25 * 1024 * 1024; // 25 MB — prevent OOM
-const TRANSCRIPTION_TIMEOUT_MS = 45_000; // 45 seconds
+const TRANSCRIPTION_TIMEOUT_MS = 60_000; // 60 seconds
 
 // Concise but strict prompt — keeps anti-hallucination safeguards
 const STT_PROMPT =
@@ -96,8 +96,22 @@ const transcribeWithGemini = async (audioBuffer, mimeType = "audio/webm") => {
       return "[Silent]";
     }
 
+    // Strip [SILENT] markers that Gemini inserts for brief pauses within speech.
+    // Only treat as silent if the ENTIRE audio had no speech.
+    const strippedText = text
+      .replace(/\[SILENT\]/gi, "")
+      .replace(/\(SILENT\)/gi, "")
+      .replace(/\[inaudible\]/gi, "")
+      .replace(/\(inaudible\)/gi, "")
+      .trim();
+
+    // If nothing remains after stripping silent markers, the audio was truly silent
+    if (!strippedText) {
+      return "[Silent]";
+    }
+
     // Detect hallucinated responses for silent audio
-    const lower = text.toLowerCase();
+    const lower = strippedText.toLowerCase();
     if (
       lower === "[silent]" ||
       lower === "(silent)" ||
@@ -111,10 +125,10 @@ const transcribeWithGemini = async (audioBuffer, mimeType = "audio/webm") => {
       return "[Silent]";
     }
 
-    return text;
+    return strippedText;
   } catch (error) {
     if (error.name === "AbortError") {
-      console.error("[Transcription] Gemini API timed out after 45s");
+      console.error("[Transcription] Gemini API timed out after 60s");
       return "[Transcription timed out]";
     }
     console.error("[Transcription] Gemini Transcription Error:", error.message);
