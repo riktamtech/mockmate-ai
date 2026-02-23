@@ -62,6 +62,7 @@ exports.uploadAudioRecording = async (req, res) => {
 
     // 2. Determine Transcript
     let finalTranscript = transcript;
+    let needsBackgroundRetry = false;
 
     // If frontend didn't provide a transcript (Web Speech failed/unsupported), use Backend Fallback
     if (
@@ -77,6 +78,18 @@ exports.uploadAudioRecording = async (req, res) => {
         audioFile.buffer,
         audioFile.mimetype,
       );
+    }
+
+    if (
+      finalTranscript &&
+      (finalTranscript.startsWith("[Transcription Failed") ||
+        finalTranscript.startsWith("[Transcription timed out]"))
+    ) {
+      needsBackgroundRetry = true;
+      console.warn(
+        `[AudioUpload] Transcription failed with ${finalTranscript}. Will retry in background.`,
+      );
+      finalTranscript = "Audio response in frontend";
     }
 
     // 3. Find the matching user message in embedded history and update it
@@ -211,6 +224,77 @@ exports.uploadAudioRecording = async (req, res) => {
         id: recordingId,
       },
     });
+
+    // ── Background Retry for Transcription ──────────────────────────
+    if (needsBackgroundRetry) {
+      Promise.resolve().then(async () => {
+        try {
+          console.log(
+            `[AudioUpload] Background transcription retry started for interactionId=${interactionId}`,
+          );
+          let retryTranscript = null;
+          const MAX_RETRIES = 2; // Try up to 2 times
+
+          for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            console.log(
+              `[AudioUpload] Transcription retry attempt ${attempt}/${MAX_RETRIES}`,
+            );
+            // Wait 2s before retry to allow transient network issues to pass
+            await new Promise((r) => setTimeout(r, 2000));
+
+            const result = await transcribeWithGemini(
+              audioFile.buffer,
+              audioFile.mimetype,
+            );
+
+            if (
+              result &&
+              !result.startsWith("[Transcription Failed") &&
+              !result.startsWith("[Transcription timed out]")
+            ) {
+              retryTranscript = result;
+              break;
+            }
+          }
+
+          if (retryTranscript) {
+            console.log(
+              `[AudioUpload] Background transcription succeeded. Updating history.`,
+            );
+
+            // Build the query to find the exact history item
+            let query = null;
+            if (interactionId) {
+              query = {
+                _id: interview._id,
+                "history.interactionId": interactionId,
+              };
+            } else if (matchedHistoryId) {
+              query = { _id: interview._id, "history._id": matchedHistoryId };
+            }
+
+            if (query) {
+              await Interview.updateOne(query, {
+                $set: { "history.$.content": retryTranscript },
+              });
+              console.log(
+                `[AudioUpload] History content updated with successful transcription.`,
+              );
+            } else {
+              console.warn(
+                `[AudioUpload] Could not establish query to update history.`,
+              );
+            }
+          } else {
+            console.log(
+              `[AudioUpload] Background transcription failed completely after ${MAX_RETRIES} attempts.`,
+            );
+          }
+        } catch (retryErr) {
+          console.error("[AudioUpload] Background retry error:", retryErr);
+        }
+      });
+    }
   } catch (error) {
     console.error("[AudioUpload] Error:", error);
     res.status(500).json({ message: error.message });
