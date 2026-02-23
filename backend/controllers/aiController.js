@@ -758,49 +758,42 @@ exports.chatStream = async (req, res) => {
       // ── Backfill user audio from audioRecordings ─────────────────────
       // If uploadAudioRecording completed before this point, the user's
       // audioS3Key is already in audioRecordings but may not be on the
-      // history item yet (race condition). Check and backfill using _id.
-      if (userHistoryId) {
+      // history item yet (race condition). Check and backfill using
+      // interactionId ONLY — never fall back to questionIndex or latest
+      // recording, as that can silently assign the wrong audio file
+      // (e.g. Q3's audio onto Q4's history entry).
+      if (userHistoryId && interactionId) {
         try {
           const freshDoc = await Interview.findById(interviewId)
             .select("audioRecordings")
             .lean();
 
           if (freshDoc && freshDoc.audioRecordings) {
-            // Find the matching recording — prefer interactionId, then questionIndex, then latest
-            let recording = null;
-            if (interactionId) {
-              recording = freshDoc.audioRecordings.find(
-                (r) => r.interactionId === interactionId,
-              );
-            }
-            if (!recording && parsedQuestionIndex !== undefined) {
-              recording = [...freshDoc.audioRecordings]
-                .reverse()
-                .find((r) => r.questionIndex === parsedQuestionIndex);
-            }
-            if (!recording) {
-              recording =
-                freshDoc.audioRecordings[freshDoc.audioRecordings.length - 1];
-            }
+            // Only match by interactionId — the unique identifier for this turn
+            const recording = freshDoc.audioRecordings.find(
+              (r) => r.interactionId === interactionId,
+            );
 
-            if (recording) {
-              // Priority 1: Match exactly by interactionId. Priority 2: Use historyId
-              const queryMatch = interactionId
-                ? { _id: interviewId, "history.interactionId": interactionId }
-                : { _id: interviewId, "history._id": userHistoryId };
-
-              const updateResult = await Interview.updateOne(queryMatch, {
-                $set: {
-                  "history.$.audioS3Key": recording.s3Key,
-                  "history.$.audioMimeType": recording.mimeType,
+            if (recording && recording.s3Key) {
+              const updateResult = await Interview.updateOne(
+                { _id: interviewId, "history.interactionId": interactionId },
+                {
+                  $set: {
+                    "history.$.audioS3Key": recording.s3Key,
+                    "history.$.audioMimeType": recording.mimeType,
+                  },
                 },
-              });
+              );
 
               if (updateResult.modifiedCount > 0) {
                 console.log(
                   `[chatStream] Backfill audioS3Key success for historyId=${userHistoryId}`,
                 );
               }
+            } else {
+              console.log(
+                `[chatStream] No audioRecording found for interactionId=${interactionId} yet — audioController will handle it`,
+              );
             }
           }
         } catch (backfillErr) {
