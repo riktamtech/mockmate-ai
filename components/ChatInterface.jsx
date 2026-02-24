@@ -8,6 +8,7 @@ import {
   Keyboard,
   Mic,
   Save,
+  HelpCircle,
 } from "lucide-react";
 import { ChatMessage } from "./ChatMessage";
 import { Button } from "./ui/Button";
@@ -75,129 +76,22 @@ export const ChatInterface = ({
   };
 
   const progressPercentage =
-    currentQuestion && totalQuestions
+    currentQuestion !== undefined && totalQuestions
       ? Math.min((currentQuestion / totalQuestions) * 100, 100)
       : 0;
 
   return (
-    <div className="flex h-screen w-full bg-slate-100">
-      {/* Left Sidebar - Interview Info */}
-      <aside className="hidden lg:flex flex-col w-72 xl:w-80 bg-white border-r border-slate-200 flex-shrink-0">
-        <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-3 mb-4">
-            {showBackButton && (
-              <button
-                onClick={onBack}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600"
-              >
-                <ArrowLeft size={20} />
-              </button>
-            )}
-            <div>
-              <h1 className="text-lg font-bold text-slate-800 tracking-tight">
-                {title}
-              </h1>
-              <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                {mode === "audio" && (
-                  <Volume2 size={12} className="text-blue-500" />
-                )}
-                <span
-                  className={`w-2 h-2 rounded-full ${mode === "audio" ? "bg-blue-500" : "bg-emerald-500"} animate-pulse`}
-                ></span>
-                {mode === "audio" ? "Voice Session" : "Live Chat"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress Section */}
-        {currentQuestion && totalQuestions && (
-          <div className="p-6 border-b border-slate-100">
-            <div className="flex items-center gap-2 mb-3">
-              <Target size={16} className="text-blue-600" />
-              <span className="text-sm font-semibold text-slate-700">
-                Interview Progress
-              </span>
-            </div>
-            <div className="bg-slate-100 rounded-full h-3 mb-2 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${progressPercentage}%` }}
-              ></div>
-            </div>
-            <p className="text-sm text-slate-600">
-              Question{" "}
-              <span className="font-bold text-blue-600">{currentQuestion}</span>{" "}
-              of <span className="font-bold">{totalQuestions}</span>
-            </p>
-          </div>
-        )}
-
-        {/* Tips Section */}
-        <div className="p-6 flex-1">
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">
-            💡 Quick Tips
-          </h3>
-          <ul className="space-y-2 text-xs text-slate-500">
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-0.5">•</span>
-              Take your time to structure your answers
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-0.5">•</span>
-              Use the STAR method for behavioral questions
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-blue-500 mt-0.5">•</span>
-              Ask clarifying questions if needed
-            </li>
-          </ul>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="p-4 border-t border-slate-100 space-y-2">
-          {onSaveExit && (
-            <div className="relative group">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onSaveExit}
-                className="flex items-center justify-center gap-2 w-full"
-              >
-                <Save size={16} />
-                Save & Exit
-              </Button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                Save your progress and continue later
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-              </div>
-            </div>
-          )}
-          {onEndSession && (
-            <div className="relative group">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onEndSession}
-                className="flex items-center justify-center gap-2 w-full border-red-200 text-red-600 hover:bg-red-50"
-              >
-                <StopCircle size={16} />
-                End Interview
-              </Button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-                End now and generate performance report
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-              </div>
-            </div>
-          )}
-        </div>
-      </aside>
-
-      {/* Main Chat Area */}
-      <div className="flex flex-col flex-1 min-w-0 bg-slate-50">
-        {/* Mobile Header */}
-        <header className="lg:hidden flex flex-col border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-10">
-          <div className="flex items-center justify-between px-4 py-3">
+    <div
+      className="flex flex-col w-full bg-slate-100 overflow-hidden"
+      style={{ height: "100dvh" }}
+    >
+      {/* Top Header */}
+      {/* Top Header */}
+      <header className="w-full bg-white border-b border-slate-200 sticky top-0 z-20 flex-shrink-0">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between px-6 py-4">
+          {/* Left Section: Session Info & Quick Tips */}
+          <div className="flex items-center gap-3 md:gap-5">
+            {/* Title Block */}
             <div className="flex items-center gap-3">
               {showBackButton && (
                 <button
@@ -208,59 +102,142 @@ export const ChatInterface = ({
                 </button>
               )}
               <div>
-                <h1 className="text-base font-bold text-slate-800">{title}</h1>
-                <p className="text-xs text-slate-500 flex items-center gap-1">
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                  {title}
+                </h1>
+                <p className="text-sm text-slate-500 flex items-center gap-2 mt-0.5">
+                  {mode === "audio" ? (
+                    <Volume2 size={14} className="text-blue-500" />
+                  ) : (
+                    <Send size={14} className="text-emerald-500" />
+                  )}
                   <span
                     className={`w-2 h-2 rounded-full ${mode === "audio" ? "bg-blue-500" : "bg-emerald-500"} animate-pulse`}
                   ></span>
-                  {mode === "audio" ? "Voice" : "Chat"}
-                  {currentQuestion && totalQuestions && (
-                    <span className="ml-2">
-                      • Q{currentQuestion}/{totalQuestions}
-                    </span>
-                  )}
+                  {mode === "audio" ? "Voice Session" : "Live Chat"}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+
+            {/* Quick Tips Hoverable - Moved here */}
+            {/* Note: I added a subtle left border to visually separate it from the title */}
+            <div className="relative group border-l border-slate-200 pl-3 hidden sm:block">
+              <button className="flex items-center gap-2 p-2 text-slate-500 hover:text-blue-600 transition-colors">
+                <span className="text-sm font-semibold">Quick Tips</span>
+                <HelpCircle size={20} />
+              </button>
+              {/* Note: Changed right-0 to left-0 so the dropdown expands inward instead of off the screen */}
+              <div className="absolute top-full left-6 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-100 p-5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
+                  Quick Tips
+                </h3>
+                <ul className="space-y-3 text-xs text-slate-600">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 font-bold">•</span>
+                    Take your time to structure your answers
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 font-bold">•</span>
+                    To pause and resume your interview later, click on the save
+                    and exit button
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 font-bold">•</span>
+                    To end interview at any point, click on the end interview
+                    button
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-500 font-bold">•</span>
+                    Ask clarifying questions if needed
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Section: Progress & Actions */}
+          <div className="flex items-center gap-6 md:gap-8">
+            {/* Progress - Moved here */}
+            {typeof currentQuestion !== "undefined" && totalQuestions > 0 && (
+              <div className="flex flex-col items-end pr-2">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Target size={18} className="text-slate-400" />
+                  <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">
+                    Progress
+                  </span>
+                </div>
+                <p className="text-lg font-bold text-slate-800">
+                  Question{" "}
+                  <span className="text-blue-600">{currentQuestion}</span> /{" "}
+                  <span className="text-slate-400">{totalQuestions}</span>
+                </p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-3">
               {onSaveExit && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={onSaveExit}
-                  title="Save progress and continue later"
-                >
-                  <Save size={16} />
-                </Button>
+                <div className="relative group">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={onSaveExit}
+                    className="flex items-center gap-2 font-semibold px-5"
+                  >
+                    <Save size={18} />
+                    Save & Exit
+                  </Button>
+                  {/* Tooltip popping down */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                    Save your progress and continue later
+                    {/* Arrow pointing up */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div>
+                  </div>
+                </div>
               )}
+
               {onEndSession && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onEndSession}
-                  className="border-red-200 text-red-600 hover:bg-red-50"
-                  title="End now and generate report"
-                >
-                  <StopCircle size={16} />
-                </Button>
+                <div className="relative group">
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={onEndSession}
+                    className="flex items-center gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-semibold px-5"
+                  >
+                    <StopCircle size={18} />
+                    End Interview
+                  </Button>
+                  {/* Tooltip popping down */}
+                  <div className="absolute top-full right-0 mt-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                    End now and generate performance report
+                    {/* Arrow pointing up */}
+                    <div className="absolute bottom-full right-4 border-4 border-transparent border-b-slate-800"></div>
+                  </div>
+                </div>
               )}
             </div>
           </div>
-          {currentQuestion && totalQuestions && (
-            <div className="w-full bg-slate-100 h-1">
-              <div
-                className="bg-blue-600 h-1 transition-all duration-500 ease-out"
-                style={{ width: `${progressPercentage}%` }}
-              ></div>
-            </div>
-          )}
-        </header>
+        </div>
 
+        {/* Progress Bar - Thick line at bottom of header */}
+        {typeof currentQuestion !== "undefined" && totalQuestions > 0 && (
+          <div className="w-full bg-slate-100 h-[6px]">
+            <div
+              className="bg-blue-600 h-full transition-all duration-500 ease-out"
+              style={{ width: `${progressPercentage}%` }}
+            ></div>
+          </div>
+        )}
+      </header>
+
+      {/* Main Chat Area */}
+      <div className="flex flex-col flex-1 min-w-0 bg-slate-50 overflow-hidden">
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 lg:px-12 xl:px-16 space-y-2 scroll-smooth">
+        <div className="flex-1 overflow-y-auto px-4 py-8 md:px-8 lg:px-12 xl:px-16 space-y-4 scroll-smooth">
           {messages.length === 0 && (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-80">
-              <p>
+              <p className="text-lg">
                 {mode === "audio"
                   ? "The interviewer will start speaking..."
                   : "Send a message to start..."}
@@ -268,7 +245,6 @@ export const ChatInterface = ({
             </div>
           )}
           {messages.map((msg, index) => {
-            // Check if this is the last message and it comes from the model
             const isLastMessage = index === messages.length - 1;
             const showRehear =
               isLastMessage && msg.role === "model" && !isStreaming;
@@ -354,7 +330,7 @@ export const ChatInterface = ({
 
         {/* Input Area */}
         <div
-          className={`px-4 md:px-8 lg:px-12 xl:px-16 py-4 bg-white ${suggestions.length === 0 || isStreaming ? "border-t border-slate-200" : ""} transition-all duration-300`}
+          className={`px-4 md:px-8 lg:px-12 xl:px-16 py-4 bg-white flex-shrink-0 ${suggestions.length === 0 || isStreaming ? "border-t border-slate-200" : ""} transition-all duration-300`}
         >
           {activeInputMode === "audio" && onSendAudio ? (
             <div className="flex flex-col items-center justify-center py-4 relative">
@@ -375,10 +351,10 @@ export const ChatInterface = ({
               )}
             </div>
           ) : (
-            <div className="relative max-w-4xl">
+            <div className="relative max-w-4xl mx-auto w-full">
               <form
                 onSubmit={handleSubmit}
-                className="relative flex items-end gap-3 bg-slate-50 p-2 rounded-2xl border border-slate-200 focus-within:border-blue-500 focus-within:bg-white focus-within:shadow-lg transition-all"
+                className="relative flex items-end gap-3 bg-slate-50 p-2 rounded-2xl border border-slate-200 focus-within:border-blue-500 focus-within:bg-white focus-within:shadow-xl transition-all"
               >
                 <textarea
                   ref={inputRef}

@@ -22,10 +22,7 @@ const getStats = asyncHandler(async (req, res) => {
   const [validUserCount, interviewStats, tokenStats] = await Promise.all([
     User.countDocuments({
       email: { $not: { $regex: TEST_USER_REGEX } },
-      isTestUser:
-        process.env.NODE_ENV === "production"
-          ? { $ne: true }
-          : { $exists: true },
+      isTestUser: { $ne: true },
     }),
 
     Interview.aggregate([
@@ -453,10 +450,7 @@ const getUserGrowth = asyncHandler(async (req, res) => {
       $match: {
         createdAt: { $gte: sevenDaysAgo },
         email: { $not: { $regex: TEST_USER_REGEX } },
-        isTestUser:
-          process.env.NODE_ENV === "production"
-            ? { $ne: true }
-            : { $exists: true },
+        isTestUser: { $ne: true },
       },
     },
     {

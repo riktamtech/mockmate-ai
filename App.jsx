@@ -137,11 +137,13 @@ export default function App() {
           .getMe()
           .then((user) => {
             setUser(user);
-            LogRocket.identify(user._id, {
-              name: user.name,
-              email: user.email,
-              isAdmin: user.isAdmin,
-            });
+            if (user.email !== "harshith@riktamtech.com") {
+              LogRocket.identify(user._id, {
+                name: user.name,
+                email: user.email,
+                isAdmin: user.isAdmin,
+              });
+            }
           })
           .catch(() => {
             localStorage.removeItem("token");
@@ -164,11 +166,13 @@ export default function App() {
             <Auth
               onLoginSuccess={(u) => {
                 setUser(u);
-                LogRocket.identify(u._id, {
-                  name: u.name,
-                  email: u.email,
-                  isAdmin: u.isAdmin,
-                });
+                if (u.email !== "harshith@riktamtech.com") {
+                  LogRocket.identify(u._id, {
+                    name: u.name,
+                    email: u.email,
+                    isAdmin: u.isAdmin,
+                  });
+                }
               }}
             />
           }
