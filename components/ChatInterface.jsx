@@ -81,7 +81,10 @@ export const ChatInterface = ({
       : 0;
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-100">
+    <div
+      className="flex flex-col w-full bg-slate-100 overflow-hidden"
+      style={{ height: "100dvh" }}
+    >
       {/* Top Header */}
       {/* Top Header */}
       <header className="w-full bg-white border-b border-slate-200 sticky top-0 z-20 flex-shrink-0">
@@ -136,11 +139,13 @@ export const ChatInterface = ({
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-500 font-bold">•</span>
-                    To pause and resume your interview later, click on the save and exit button
+                    To pause and resume your interview later, click on the save
+                    and exit button
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-500 font-bold">•</span>
-                    To end interview at any point, click on the end interview button
+                    To end interview at any point, click on the end interview
+                    button
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-500 font-bold">•</span>
@@ -157,8 +162,8 @@ export const ChatInterface = ({
             {typeof currentQuestion !== "undefined" && totalQuestions > 0 && (
               <div className="flex flex-col items-end pr-2">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <Target size={14} className="text-slate-400" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <Target size={18} className="text-slate-400" />
+                  <span className="text-[14px] font-bold text-slate-500 uppercase tracking-widest">
                     Progress
                   </span>
                 </div>
@@ -173,26 +178,43 @@ export const ChatInterface = ({
             {/* Actions */}
             <div className="flex items-center gap-3">
               {onSaveExit && (
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={onSaveExit}
-                  className="flex items-center gap-2 font-semibold px-5"
-                >
-                  <Save size={18} />
-                  Save & Exit
-                </Button>
+                <div className="relative group">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={onSaveExit}
+                    className="flex items-center gap-2 font-semibold px-5"
+                  >
+                    <Save size={18} />
+                    Save & Exit
+                  </Button>
+                  {/* Tooltip popping down */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                    Save your progress and continue later
+                    {/* Arrow pointing up */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-800"></div>
+                  </div>
+                </div>
               )}
+
               {onEndSession && (
-                <Button
-                  variant="outline"
-                  size="md"
-                  onClick={onEndSession}
-                  className="flex items-center gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-semibold px-5"
-                >
-                  <StopCircle size={18} />
-                  End Interview
-                </Button>
+                <div className="relative group">
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={onEndSession}
+                    className="flex items-center gap-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-semibold px-5"
+                  >
+                    <StopCircle size={18} />
+                    End Interview
+                  </Button>
+                  {/* Tooltip popping down */}
+                  <div className="absolute top-full right-0 mt-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                    End now and generate performance report
+                    {/* Arrow pointing up */}
+                    <div className="absolute bottom-full right-4 border-4 border-transparent border-b-slate-800"></div>
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -308,7 +330,7 @@ export const ChatInterface = ({
 
         {/* Input Area */}
         <div
-          className={`px-4 md:px-8 lg:px-12 xl:px-16 py-6 bg-white ${suggestions.length === 0 || isStreaming ? "border-t border-slate-200" : ""} transition-all duration-300`}
+          className={`px-4 md:px-8 lg:px-12 xl:px-16 py-4 bg-white flex-shrink-0 ${suggestions.length === 0 || isStreaming ? "border-t border-slate-200" : ""} transition-all duration-300`}
         >
           {activeInputMode === "audio" && onSendAudio ? (
             <div className="flex flex-col items-center justify-center py-4 relative">
