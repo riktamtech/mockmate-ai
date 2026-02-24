@@ -27,10 +27,7 @@ const getStats = asyncHandler(async (req, res) => {
 
     Interview.aggregate([
       {
-        $match:
-          process.env.NODE_ENV === "production"
-            ? { user: { $nin: testUserIds } }
-            : {},
+        $match: { user: { $nin: testUserIds } },
       },
       {
         $facet: {
@@ -44,10 +41,7 @@ const getStats = asyncHandler(async (req, res) => {
     ]),
     Interview.aggregate([
       {
-        $match:
-          process.env.NODE_ENV === "production"
-            ? { user: { $nin: testUserIds } }
-            : {},
+        $match: { user: { $nin: testUserIds } },
       },
       {
         $group: {
