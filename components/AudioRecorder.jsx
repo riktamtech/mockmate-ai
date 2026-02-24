@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Mic, Square, Loader2 } from "lucide-react";
+import { Mic, Square, Loader2, Trash2, Send } from "lucide-react";
 import { Button } from "./ui/Button";
 import useSpeechRecognition from "../hooks/useSpeechRecognition";
 
@@ -29,6 +29,90 @@ const getPreferredMimeType = () => {
   return "audio/webm"; // Fallback default
 };
 
+// ─── Component: LiveAudioVisualizer ─────────────────────────────────
+const LiveAudioVisualizer = ({ stream }) => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    if (!stream) return;
+
+    let audioContext;
+    let analyser;
+    let source;
+    let animationId;
+
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+
+      source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+
+      const draw = () => {
+        animationId = requestAnimationFrame(draw);
+        analyser.getByteFrequencyData(dataArray);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const barWidth = 3;
+        const barGap = 3;
+        const totalBars = Math.floor(canvas.width / (barWidth + barGap));
+        const centerY = canvas.height / 2;
+
+        for (let i = 0; i < totalBars; i++) {
+          const dataIndex = Math.floor((i / totalBars) * (bufferLength / 3));
+          let value = dataArray[dataIndex];
+          const normalizedValue = value / 255;
+
+          const minHeight = 3;
+          const maxHeight = canvas.height - 4;
+          let h = minHeight + normalizedValue * maxHeight;
+
+          // Gentle idle wave when silent
+          if (value === 0) {
+            h = minHeight + Math.abs(Math.sin(Date.now() / 300 + i)) * 3;
+          }
+
+          const x = i * (barWidth + barGap);
+          const y = centerY - h / 2;
+
+          ctx.fillStyle = "#ea4335";
+          ctx.beginPath();
+          ctx.roundRect(x, y, barWidth, h, barWidth / 2);
+          ctx.fill();
+        }
+      };
+
+      draw();
+    } catch (err) {
+      console.error("Audio visualizer error:", err);
+    }
+
+    return () => {
+      if (animationId) cancelAnimationFrame(animationId);
+      if (source) source.disconnect();
+      if (analyser) analyser.disconnect();
+      if (audioContext && audioContext.state !== "closed") audioContext.close();
+    };
+  }, [stream]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={110}
+      height={24}
+      className="opacity-90 mx-1"
+    />
+  );
+};
+
 // ─── Component ──────────────────────────────────────────────────────
 export const AudioRecorder = ({
   onRecordingComplete,
@@ -37,6 +121,8 @@ export const AudioRecorder = ({
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [recordedData, setRecordedData] = useState(null);
+  const [isProcessingLocal, setIsProcessingLocal] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -122,18 +208,26 @@ export const AudioRecorder = ({
         // Skip empty recordings
         if (blob.size === 0) {
           console.warn("[AudioRecorder] Empty recording, skipping");
+          setIsProcessingLocal(false);
           return;
         }
 
-        // Stop recognition and get final transcript (Web Speech or Puter)
-        const finalTranscript = await stopListening(blob);
-        onRecordingComplete(blob, finalTranscript);
+        try {
+          // Stop recognition and get final transcript (Web Speech or Puter)
+          const finalTranscript = await stopListening(blob);
+          setRecordedData({ blob, transcript: finalTranscript });
+        } catch (err) {
+          console.error("[AudioRecorder] Error finalizing recording:", err);
+        } finally {
+          setIsProcessingLocal(false);
+        }
       };
 
       mediaRecorder.onerror = (event) => {
         console.error("[AudioRecorder] MediaRecorder error:", event.error);
         cleanupRecording();
         setIsRecording(false);
+        setIsProcessingLocal(false);
       };
 
       // Start recording with timeslice for chunked data
@@ -195,14 +289,16 @@ export const AudioRecorder = ({
       maxTimerRef.current = null;
     }
 
+    setIsRecording(false);
+    setIsProcessingLocal(true);
+
     try {
       mediaRecorderRef.current.stop(); // This triggers onstop above
     } catch (e) {
       console.error("[AudioRecorder] Error stopping recorder:", e);
       cleanupRecording();
+      setIsProcessingLocal(false);
     }
-
-    setIsRecording(false);
   }, [cleanupRecording]);
 
   // ── Format Time Display ─────────────────────────────────────────
@@ -213,7 +309,7 @@ export const AudioRecorder = ({
   };
 
   // ── Render: Processing State ────────────────────────────────────
-  if (isProcessing) {
+  if (isProcessing || isProcessingLocal) {
     return (
       <div className="flex items-center gap-3 text-slate-500 bg-white px-6 py-3 rounded-full border border-slate-200 shadow-sm">
         <Loader2 className="animate-spin text-blue-500" size={20} />
@@ -222,42 +318,60 @@ export const AudioRecorder = ({
     );
   }
 
+  // ── Render: Recorded State (Waiting to send) ────────────────────
+  if (recordedData) {
+    return (
+      <div className="flex items-center gap-2 bg-white p-1.5 pl-3 rounded-full shadow-md border border-slate-100 transition-all duration-300">
+        <button
+          onClick={() => setRecordedData(null)}
+          className="w-10 h-10 flex items-center justify-center rounded-full text-[#ea4335] hover:bg-red-50 transition-colors"
+          title="Delete recording"
+        >
+          <Trash2 size={20} strokeWidth={2.5} />
+        </button>
+        <button
+          onClick={() => {
+            onRecordingComplete(recordedData.blob, recordedData.transcript);
+            setRecordedData(null);
+          }}
+          className="flex items-center gap-2 bg-[#1a73e8] hover:bg-blue-600 text-white px-5 py-2.5 rounded-full font-medium transition-all shadow-sm"
+        >
+          Send Response
+          <Send size={18} />
+        </button>
+      </div>
+    );
+  }
+
   // ── Render: Recording State ─────────────────────────────────────
   if (isRecording) {
     return (
-      <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-4 bg-red-50 px-6 py-3 rounded-full border border-red-200 animate-pulse">
-          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-          <span className="text-red-600 font-mono w-12 text-center">
-            {formatTime(recordingTime)}
-          </span>
-        </div>
-        <Button
-          variant="danger"
-          size="lg"
+      <div className="flex items-center gap-3 bg-[#fff1f0] pr-2 pl-6 py-2 rounded-full border border-red-100 shadow-sm transition-all duration-300">
+        <LiveAudioVisualizer stream={streamRef.current} />
+        <span className="text-slate-600 font-medium text-[15px] w-12 text-center font-mono">
+          {formatTime(recordingTime)}
+        </span>
+        <button
           onClick={stopRecording}
-          className="rounded-full w-16 h-16 flex items-center justify-center p-0 shadow-lg shadow-red-500/30 ring-4 ring-red-100"
+          className="w-12 h-12 ml-1 bg-[#ea4335] hover:bg-[#d63c2e] text-white rounded-full flex items-center justify-center shadow-md transition-transform hover:scale-105"
         >
-          <Square size={24} fill="currentColor" />
-        </Button>
-        <p className="text-sm text-slate-500">Tap to finish speaking</p>
+          <Square size={16} fill="currentColor" className="opacity-90" />
+        </button>
       </div>
     );
   }
 
   // ── Render: Default State ───────────────────────────────────────
   return (
-    <div className="flex flex-col items-center gap-2">
-      <Button
-        variant="primary"
-        size="lg"
-        onClick={startRecording}
-        disabled={disabled}
-        className="rounded-full w-16 h-16 flex items-center justify-center p-0 bg-blue-600 hover:bg-blue-500 shadow-xl shadow-blue-500/30 transition-all hover:scale-105"
-      >
-        <Mic size={28} />
-      </Button>
-      <p className="text-sm text-slate-400">Tap to answer</p>
-    </div>
+    <button
+      onClick={startRecording}
+      disabled={disabled}
+      className="flex items-center justify-center gap-2.5 bg-[#d93025] hover:bg-[#c5221f] disabled:bg-red-300 disabled:cursor-not-allowed text-white px-7 py-3 rounded-full shadow-md hover:shadow-lg transition-all border-0 focus:ring-0 focus:outline-none"
+    >
+      <Mic size={20} className="opacity-90" strokeWidth={2.5} />
+      <span className="font-medium text-[16px] tracking-wide">
+        Start Speaking
+      </span>
+    </button>
   );
 };

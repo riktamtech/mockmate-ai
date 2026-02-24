@@ -1,27 +1,73 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Button } from './ui/Button';
-import { api } from '../services/api';
-import { 
-  User, Briefcase, Code, Upload, X, FileText, 
-  Linkedin, Github, Phone, Target, Loader2, CheckCircle,
-  Sparkles, Globe, GraduationCap, ArrowRight, SkipForward,
-  Info, HelpCircle, RefreshCw
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useAppStore } from '../store/useAppStore';
+import React, { useState, useRef, useEffect } from "react";
+import { Button } from "./ui/Button";
+import { api } from "../services/api";
+import {
+  User,
+  Briefcase,
+  Code,
+  Upload,
+  X,
+  FileText,
+  Linkedin,
+  Github,
+  Phone,
+  Target,
+  Loader2,
+  CheckCircle,
+  Sparkles,
+  Globe,
+  GraduationCap,
+  ArrowRight,
+  SkipForward,
+  Info,
+  HelpCircle,
+  RefreshCw,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAppStore } from "../store/useAppStore";
 
 const experienceLevels = [
-  { value: 'fresher', label: 'Fresher (0-1 years)', description: 'Just starting out' },
-  { value: 'junior', label: 'Junior (1-3 years)', description: 'Building experience' },
-  { value: 'mid', label: 'Mid-Level (3-5 years)', description: 'Solid experience' },
-  { value: 'senior', label: 'Senior (5-8 years)', description: 'Expert level' },
-  { value: 'lead', label: 'Lead (8-12 years)', description: 'Leadership experience' },
-  { value: 'manager', label: 'Manager (12+ years)', description: 'Management & Strategy' }
+  {
+    value: "fresher",
+    label: "Fresher (0-1 years)",
+    description: "Just starting out",
+  },
+  {
+    value: "junior",
+    label: "Junior (1-3 years)",
+    description: "Building experience",
+  },
+  {
+    value: "mid",
+    label: "Mid-Level (3-5 years)",
+    description: "Solid experience",
+  },
+  { value: "senior", label: "Senior (5-8 years)", description: "Expert level" },
+  {
+    value: "lead",
+    label: "Lead (8-12 years)",
+    description: "Leadership experience",
+  },
+  {
+    value: "manager",
+    label: "Manager (12+ years)",
+    description: "Management & Strategy",
+  },
 ];
 
 const roleTypes = [
-  { value: 'tech', label: 'Technical', description: 'Software, Engineering, Data, IT', icon: Code },
-  { value: 'non-tech', label: 'Non-Technical', description: 'Sales, Marketing, HR, Finance, Ops', icon: Briefcase }
+  {
+    value: "tech",
+    label: "Technical",
+    description: "Software, Engineering, Data, IT",
+    icon: Code,
+  },
+  {
+    value: "non-tech",
+    label: "Non-Technical",
+    description: "Sales, Marketing, HR, Finance, Ops",
+    icon: Briefcase,
+  },
 ];
 
 export const ProfileSetup = () => {
@@ -30,23 +76,23 @@ export const ProfileSetup = () => {
   const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    phone: '',
-    experienceLevel: '',
+    name: user?.name || "",
+    phone: "",
+    experienceLevel: "",
     yearsOfExperience: 0,
-    currentRole: '',
-    targetRole: '',
-    skills: '',
-    linkedinUrl: '',
-    githubUrl: '',
-    portfolioUrl: '',
-    roleType: 'tech' // Default to tech
+    currentRole: "",
+    targetRole: "",
+    skills: "",
+    linkedinUrl: "",
+    githubUrl: "",
+    portfolioUrl: "",
+    roleType: "tech", // Default to tech
   });
-  
+
   const [resume, setResume] = useState(null);
   const [loading, setLoading] = useState(false);
   const [parsingResume, setParsingResume] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [step, setStep] = useState(1); // 1: Resume Upload, 2: Basic Info, 3: Professional Details
   const [extractedData, setExtractedData] = useState(null);
   const [showExtractedBadge, setShowExtractedBadge] = useState({});
@@ -61,7 +107,7 @@ export const ProfileSetup = () => {
         const profile = await api.getProfile();
         setUser(profile);
       } catch (err) {
-        console.error('Error fetching profile:', err);
+        console.error("Error fetching profile:", err);
       } finally {
         setLoadingProfile(false);
       }
@@ -72,23 +118,23 @@ export const ProfileSetup = () => {
   // Check if user has an existing resume
   const hasExistingResume = user?.resumeFileName && user?.resumeUrl;
 
-  const isTechRole = formData.roleType === 'tech';
+  const isTechRole = formData.roleType === "tech";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleExperienceSelect = (level) => {
-    setFormData(prev => ({ ...prev, experienceLevel: level }));
+    setFormData((prev) => ({ ...prev, experienceLevel: level }));
   };
 
   const handleRoleTypeSelect = (type) => {
-    setFormData(prev => ({ 
-      ...prev, 
+    setFormData((prev) => ({
+      ...prev,
       roleType: type,
       // Clear GitHub URL if switching to non-tech
-      githubUrl: type === 'non-tech' ? '' : prev.githubUrl
+      githubUrl: type === "non-tech" ? "" : prev.githubUrl,
     }));
   };
 
@@ -96,17 +142,21 @@ export const ProfileSetup = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 7 * 1024 * 1024) {
-        setError('File size must be less than 7MB');
+        setError("File size must be less than 7MB");
         return;
       }
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const allowedTypes = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ];
       if (!allowedTypes.includes(file.type)) {
-        setError('Only PDF, DOC, and DOCX files are allowed');
+        setError("Only PDF, DOC, and DOCX files are allowed");
         return;
       }
       setResume(file);
-      setError('');
-      
+      setError("");
+
       // Automatically parse the resume
       await parseResumeFile(file);
     }
@@ -114,19 +164,19 @@ export const ProfileSetup = () => {
 
   const parseResumeFile = async (file) => {
     setParsingResume(true);
-    setError('');
-    
+    setError("");
+
     try {
       const result = await api.parseResume(file);
-      
+
       if (result.extractedData) {
         setExtractedData(result.extractedData);
-        
+
         // Auto-fill form with extracted data
         const extracted = result.extractedData;
         const fieldsToUpdate = {};
         const badges = {};
-        
+
         if (extracted.name && extracted.name.trim()) {
           fieldsToUpdate.name = extracted.name;
           badges.name = true;
@@ -140,8 +190,8 @@ export const ProfileSetup = () => {
           badges.currentRole = true;
         }
         if (extracted.skills && extracted.skills.length > 0) {
-          fieldsToUpdate.skills = Array.isArray(extracted.skills) 
-            ? extracted.skills.join(', ') 
+          fieldsToUpdate.skills = Array.isArray(extracted.skills)
+            ? extracted.skills.join(", ")
             : extracted.skills;
           badges.skills = true;
         }
@@ -169,13 +219,15 @@ export const ProfileSetup = () => {
           fieldsToUpdate.roleType = extracted.roleType;
           badges.roleType = true;
         }
-        
-        setFormData(prev => ({ ...prev, ...fieldsToUpdate }));
+
+        setFormData((prev) => ({ ...prev, ...fieldsToUpdate }));
         setShowExtractedBadge(badges);
       }
     } catch (err) {
-      console.error('Resume parsing error:', err);
-      setError('Failed to parse resume. You can still fill in your details manually.');
+      console.error("Resume parsing error:", err);
+      setError(
+        "Failed to parse resume. You can still fill in your details manually.",
+      );
     } finally {
       setParsingResume(false);
     }
@@ -187,27 +239,27 @@ export const ProfileSetup = () => {
     setShowExtractedBadge({});
     setUseExistingResume(false);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   const handleUseExistingResume = async () => {
     setUseExistingResume(true);
     setParsingResume(true);
-    setError('');
-    
+    setError("");
+
     try {
       // Fetch and parse the existing resume
       const result = await api.parseExistingResume();
-      
+
       if (result.extractedData) {
         setExtractedData(result.extractedData);
-        
+
         // Auto-fill form with extracted data
         const extracted = result.extractedData;
         const fieldsToUpdate = {};
         const badges = {};
-        
+
         if (extracted.name && extracted.name.trim()) {
           fieldsToUpdate.name = extracted.name;
           badges.name = true;
@@ -221,8 +273,8 @@ export const ProfileSetup = () => {
           badges.currentRole = true;
         }
         if (extracted.skills && extracted.skills.length > 0) {
-          fieldsToUpdate.skills = Array.isArray(extracted.skills) 
-            ? extracted.skills.join(', ') 
+          fieldsToUpdate.skills = Array.isArray(extracted.skills)
+            ? extracted.skills.join(", ")
             : extracted.skills;
           badges.skills = true;
         }
@@ -250,13 +302,15 @@ export const ProfileSetup = () => {
           fieldsToUpdate.roleType = extracted.roleType;
           badges.roleType = true;
         }
-        
-        setFormData(prev => ({ ...prev, ...fieldsToUpdate }));
+
+        setFormData((prev) => ({ ...prev, ...fieldsToUpdate }));
         setShowExtractedBadge(badges);
       }
     } catch (err) {
-      console.error('Resume parsing error:', err);
-      setError('Failed to parse existing resume. You can upload a new one or fill details manually.');
+      console.error("Resume parsing error:", err);
+      setError(
+        "Failed to parse existing resume. You can upload a new one or fill details manually.",
+      );
       setUseExistingResume(false);
     } finally {
       setParsingResume(false);
@@ -266,42 +320,42 @@ export const ProfileSetup = () => {
   const handleNext = () => {
     if (step === 1) {
       // Resume step - can proceed with or without resume
-      setError('');
+      setError("");
       setStep(2);
     } else if (step === 2) {
       if (!formData.name.trim()) {
-        setError('Please enter your name');
+        setError("Please enter your name");
         return;
       }
       if (!formData.experienceLevel) {
-        setError('Please select your experience level');
+        setError("Please select your experience level");
         return;
       }
       if (!formData.roleType) {
-        setError('Please select your role type');
+        setError("Please select your role type");
         return;
       }
-      setError('');
+      setError("");
       setStep(3);
     }
   };
 
   const handleBack = () => {
-    setStep(prev => prev - 1);
-    setError('');
+    setStep((prev) => prev - 1);
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       const updatedUser = await api.completeProfileSetup(formData);
       setUser(updatedUser);
-      navigate('/mockmate/candidate/dashboard');
+      navigate("/mockmate/candidate/dashboard");
     } catch (err) {
-      setError(err.message || 'Failed to save profile');
+      setError(err.message || "Failed to save profile");
     } finally {
       setLoading(false);
     }
@@ -310,15 +364,15 @@ export const ProfileSetup = () => {
   const handleSkip = async () => {
     setLoading(true);
     try {
-      const updatedUser = await api.completeProfileSetup({ 
+      const updatedUser = await api.completeProfileSetup({
         name: formData.name || user?.name,
-        experienceLevel: formData.experienceLevel || 'fresher',
-        roleType: formData.roleType || 'tech'
+        experienceLevel: formData.experienceLevel || "fresher",
+        roleType: formData.roleType || "tech",
       });
       setUser(updatedUser);
-      navigate('/mockmate/candidate/dashboard');
+      navigate("/mockmate/candidate/dashboard");
     } catch (err) {
-      setError(err.message || 'Failed to save profile');
+      setError(err.message || "Failed to save profile");
     } finally {
       setLoading(false);
     }
@@ -336,13 +390,21 @@ export const ProfileSetup = () => {
         {/* Header - Fixed */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6 text-white flex-shrink-0">
           <h1 className="text-2xl font-bold">Complete Your Profile</h1>
-          <p className="text-blue-100 mt-1">Help us personalize your interview experience</p>
-          
+          <p className="text-blue-100 mt-1">
+            Help us personalize your interview experience
+          </p>
+
           {/* Progress Indicator */}
           <div className="flex items-center gap-2 mt-4">
-            <div className={`h-2 flex-1 rounded-full ${step >= 1 ? 'bg-white' : 'bg-white/30'}`} />
-            <div className={`h-2 flex-1 rounded-full ${step >= 2 ? 'bg-white' : 'bg-white/30'}`} />
-            <div className={`h-2 flex-1 rounded-full ${step >= 3 ? 'bg-white' : 'bg-white/30'}`} />
+            <div
+              className={`h-2 flex-1 rounded-full ${step >= 1 ? "bg-white" : "bg-white/30"}`}
+            />
+            <div
+              className={`h-2 flex-1 rounded-full ${step >= 2 ? "bg-white" : "bg-white/30"}`}
+            />
+            <div
+              className={`h-2 flex-1 rounded-full ${step >= 3 ? "bg-white" : "bg-white/30"}`}
+            />
           </div>
           <div className="flex justify-between text-xs mt-2 text-blue-100">
             <span>Resume</span>
@@ -359,23 +421,32 @@ export const ProfileSetup = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="flex flex-col h-full">
+          <form onSubmit={handleSubmit} className="flex flex-col">
             {/* Step 1: Resume Upload */}
             {step === 1 && (
-              <div className="space-y-6 flex-1">
+              <div className="space-y-6">
                 <div className="text-center mb-6">
                   <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <FileText className="text-blue-600" size={28} />
                   </div>
-                  <h2 className="text-xl font-semibold text-slate-800">Upload Your Resume</h2>
-                  <p className="text-slate-500 mt-2">We'll extract your details automatically using AI</p>
+                  <h2 className="text-xl font-semibold text-slate-800">
+                    Upload Your Resume
+                  </h2>
+                  <p className="text-slate-500 mt-2">
+                    We'll extract your details automatically using AI
+                  </p>
                 </div>
 
                 {/* Loading state while fetching profile */}
                 {loadingProfile ? (
                   <div className="flex items-center justify-center gap-3 p-8 border-2 border-dashed border-slate-200 rounded-xl">
-                    <Loader2 className="animate-spin text-slate-400" size={24} />
-                    <span className="text-slate-500">Checking for existing resume...</span>
+                    <Loader2
+                      className="animate-spin text-slate-400"
+                      size={24}
+                    />
+                    <span className="text-slate-500">
+                      Checking for existing resume...
+                    </span>
                   </div>
                 ) : !resume && !useExistingResume ? (
                   <div className="space-y-4">
@@ -386,8 +457,12 @@ export const ProfileSetup = () => {
                           <div className="flex items-center gap-3">
                             <FileText className="text-blue-600" size={20} />
                             <div>
-                              <p className="font-medium text-slate-700">Previously uploaded resume</p>
-                              <p className="text-xs text-slate-500">{user.resumeFileName}</p>
+                              <p className="font-medium text-slate-700">
+                                Previously uploaded resume
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {user.resumeFileName}
+                              </p>
                             </div>
                           </div>
                           <Button
@@ -409,11 +484,18 @@ export const ProfileSetup = () => {
                       onClick={() => fileInputRef.current?.click()}
                       className="border-2 border-dashed border-slate-300 rounded-xl p-10 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all group"
                     >
-                      <Upload className="mx-auto text-slate-400 group-hover:text-blue-500 mb-4 transition-colors" size={40} />
+                      <Upload
+                        className="mx-auto text-slate-400 group-hover:text-blue-500 mb-4 transition-colors"
+                        size={40}
+                      />
                       <p className="text-slate-600 font-medium">
-                        {hasExistingResume ? 'Or upload a new resume' : 'Click to upload your resume'}
+                        {hasExistingResume
+                          ? "Or upload a new resume"
+                          : "Click to upload your resume"}
                       </p>
-                      <p className="text-sm text-slate-400 mt-2">PDF, DOC, or DOCX (max 7MB)</p>
+                      <p className="text-sm text-slate-400 mt-2">
+                        PDF, DOC, or DOCX (max 7MB)
+                      </p>
                       <div className="mt-4 flex items-center justify-center gap-2 text-purple-600 text-sm">
                         <Sparkles size={14} />
                         <span>AI will extract skills, experience & more</span>
@@ -423,13 +505,18 @@ export const ProfileSetup = () => {
                 ) : (
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-                      <CheckCircle className="text-emerald-500 flex-shrink-0" size={24} />
+                      <CheckCircle
+                        className="text-emerald-500 flex-shrink-0"
+                        size={24}
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-slate-700 truncate">
                           {resume ? resume.name : user?.resumeFileName}
                         </p>
                         <p className="text-xs text-slate-500">
-                          {resume ? `${(resume.size / 1024).toFixed(1)} KB` : 'Using existing resume'}
+                          {resume
+                            ? `${(resume.size / 1024).toFixed(1)} KB`
+                            : "Using existing resume"}
                         </p>
                       </div>
                       <button
@@ -444,16 +531,26 @@ export const ProfileSetup = () => {
 
                     {parsingResume && (
                       <div className="flex items-center justify-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-                        <Loader2 className="animate-spin text-blue-600" size={20} />
-                        <span className="text-blue-700 font-medium">Analyzing resume with AI...</span>
+                        <Loader2
+                          className="animate-spin text-blue-600"
+                          size={20}
+                        />
+                        <span className="text-blue-700 font-medium">
+                          Analyzing resume with AI...
+                        </span>
                       </div>
                     )}
 
                     {extractedData && !parsingResume && (
                       <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-                        <Info size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                        <Info
+                          size={18}
+                          className="text-amber-600 flex-shrink-0 mt-0.5"
+                        />
                         <p className="text-amber-800">
-                          AI extraction may not be 100% accurate. Don't worry — you can review and update all details in the next steps or later from your profile settings.
+                          AI extraction may not be 100% accurate. Don't worry —
+                          you can review and update all details in the next
+                          steps or later from your profile settings.
                         </p>
                       </div>
                     )}
@@ -467,24 +564,32 @@ export const ProfileSetup = () => {
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           {extractedData.name && (
                             <div className="text-slate-600">
-                              <span className="text-slate-400">Name:</span> {extractedData.name}
+                              <span className="text-slate-400">Name:</span>{" "}
+                              {extractedData.name}
                             </div>
                           )}
                           {extractedData.currentRole && (
                             <div className="text-slate-600">
-                              <span className="text-slate-400">Role:</span> {extractedData.currentRole}
+                              <span className="text-slate-400">Role:</span>{" "}
+                              {extractedData.currentRole}
                             </div>
                           )}
                           {extractedData.yearsOfExperience && (
                             <div className="text-slate-600">
-                              <span className="text-slate-400">Experience:</span> {extractedData.yearsOfExperience} years
+                              <span className="text-slate-400">
+                                Experience:
+                              </span>{" "}
+                              {extractedData.yearsOfExperience} years
                             </div>
                           )}
-                          {extractedData.skills && extractedData.skills.length > 0 && (
-                            <div className="text-slate-600 col-span-2">
-                              <span className="text-slate-400">Skills:</span> {extractedData.skills.slice(0, 5).join(', ')}{extractedData.skills.length > 5 ? '...' : ''}
-                            </div>
-                          )}
+                          {extractedData.skills &&
+                            extractedData.skills.length > 0 && (
+                              <div className="text-slate-600 col-span-2">
+                                <span className="text-slate-400">Skills:</span>{" "}
+                                {extractedData.skills.slice(0, 5).join(", ")}
+                                {extractedData.skills.length > 5 ? "..." : ""}
+                              </div>
+                            )}
                         </div>
                       </div>
                     )}
@@ -503,13 +608,18 @@ export const ProfileSetup = () => {
 
             {/* Step 2: Basic Info */}
             {step === 2 && (
-              <div className="space-y-6 flex-1">
+              <div className="space-y-6">
                 {/* Verification notice if data was extracted */}
                 {Object.keys(showExtractedBadge).length > 0 && (
                   <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                    <Info size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                    <Info
+                      size={18}
+                      className="text-blue-600 flex-shrink-0 mt-0.5"
+                    />
                     <p className="text-blue-800">
-                      <strong>Please verify:</strong> We've pre-filled some fields from your resume. Please review and correct any information that may be inaccurate.
+                      <strong>Please verify:</strong> We've pre-filled some
+                      fields from your resume. Please review and correct any
+                      information that may be inaccurate.
                     </p>
                   </div>
                 )}
@@ -518,8 +628,7 @@ export const ProfileSetup = () => {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     <User size={16} className="inline mr-2" />
-                    Full Name *
-                    {showExtractedBadge.name && <ExtractedBadge />}
+                    Full Name *{showExtractedBadge.name && <ExtractedBadge />}
                   </label>
                   <input
                     type="text"
@@ -546,15 +655,26 @@ export const ProfileSetup = () => {
                         onClick={() => handleRoleTypeSelect(type.value)}
                         className={`p-4 rounded-xl border-2 text-left transition-all ${
                           formData.roleType === type.value
-                            ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                            : 'border-slate-200 hover:border-slate-300'
+                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
+                            : "border-slate-200 hover:border-slate-300"
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <type.icon size={18} className={formData.roleType === type.value ? 'text-blue-600' : 'text-slate-400'} />
-                          <span className="font-medium text-slate-800">{type.label}</span>
+                          <type.icon
+                            size={18}
+                            className={
+                              formData.roleType === type.value
+                                ? "text-blue-600"
+                                : "text-slate-400"
+                            }
+                          />
+                          <span className="font-medium text-slate-800">
+                            {type.label}
+                          </span>
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">{type.description}</div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {type.description}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -575,12 +695,16 @@ export const ProfileSetup = () => {
                         onClick={() => handleExperienceSelect(level.value)}
                         className={`p-4 rounded-xl border-2 text-left transition-all ${
                           formData.experienceLevel === level.value
-                            ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                            : 'border-slate-200 hover:border-slate-300'
+                            ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200"
+                            : "border-slate-200 hover:border-slate-300"
                         }`}
                       >
-                        <div className="font-medium text-slate-800">{level.label}</div>
-                        <div className="text-xs text-slate-500">{level.description}</div>
+                        <div className="font-medium text-slate-800">
+                          {level.label}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {level.description}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -590,13 +714,17 @@ export const ProfileSetup = () => {
 
             {/* Step 3: Professional Details */}
             {step === 3 && (
-              <div className="space-y-6 flex-1">
+              <div className="space-y-6">
                 {/* Verification notice if data was extracted */}
                 {Object.keys(showExtractedBadge).length > 0 && (
                   <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                    <Info size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                    <Info
+                      size={18}
+                      className="text-blue-600 flex-shrink-0 mt-0.5"
+                    />
                     <p className="text-blue-800">
-                      <strong>Please verify:</strong> Review the auto-filled fields below and make corrections if needed.
+                      <strong>Please verify:</strong> Review the auto-filled
+                      fields below and make corrections if needed.
                     </p>
                   </div>
                 )}
@@ -615,7 +743,11 @@ export const ProfileSetup = () => {
                       value={formData.currentRole}
                       onChange={handleChange}
                       className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder={isTechRole ? "e.g., Software Engineer" : "e.g., Marketing Manager"}
+                      placeholder={
+                        isTechRole
+                          ? "e.g., Software Engineer"
+                          : "e.g., Marketing Manager"
+                      }
                     />
                   </div>
                   <div className="relative">
@@ -627,14 +759,23 @@ export const ProfileSetup = () => {
                         className="ml-1 text-slate-400 hover:text-slate-600 inline-flex"
                         onMouseEnter={() => setShowTargetRoleTooltip(true)}
                         onMouseLeave={() => setShowTargetRoleTooltip(false)}
-                        onClick={() => setShowTargetRoleTooltip(!showTargetRoleTooltip)}
+                        onClick={() =>
+                          setShowTargetRoleTooltip(!showTargetRoleTooltip)
+                        }
                       >
                         <HelpCircle size={14} />
                       </button>
                       {showTargetRoleTooltip && (
                         <div className="absolute left-0 top-full mt-1 z-10 w-64 p-3 bg-slate-800 text-white text-xs rounded-lg shadow-lg">
-                          <p><strong>Target Role</strong> is the position you're preparing to interview for. This helps us tailor interview questions to your career goals.</p>
-                          <p className="mt-1 text-slate-300">Example: If you're a Junior Developer aiming for a Senior role, enter "Senior Developer".</p>
+                          <p>
+                            <strong>Target Role</strong> is the position you're
+                            preparing to interview for. This helps us tailor
+                            interview questions to your career goals.
+                          </p>
+                          <p className="mt-1 text-slate-300">
+                            Example: If you're a Junior Developer aiming for a
+                            Senior role, enter "Senior Developer".
+                          </p>
                           <div className="absolute -top-1 left-4 w-2 h-2 bg-slate-800 rotate-45"></div>
                         </div>
                       )}
@@ -645,7 +786,11 @@ export const ProfileSetup = () => {
                       value={formData.targetRole}
                       onChange={handleChange}
                       className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder={isTechRole ? "e.g., Senior Developer" : "e.g., Director of Marketing"}
+                      placeholder={
+                        isTechRole
+                          ? "e.g., Senior Developer"
+                          : "e.g., Director of Marketing"
+                      }
                     />
                   </div>
                 </div>
@@ -654,7 +799,7 @@ export const ProfileSetup = () => {
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     <Code size={16} className="inline mr-2" />
-                    {isTechRole ? 'Technical Skills' : 'Key Skills'}
+                    {isTechRole ? "Technical Skills" : "Key Skills"}
                     {showExtractedBadge.skills && <ExtractedBadge />}
                   </label>
                   <textarea
@@ -663,18 +808,21 @@ export const ProfileSetup = () => {
                     onChange={(e) => {
                       handleChange(e);
                       // Auto-expand textarea
-                      e.target.style.height = 'auto';
-                      e.target.style.height = e.target.scrollHeight + 'px';
+                      e.target.style.height = "auto";
+                      e.target.style.height = e.target.scrollHeight + "px";
                     }}
                     rows={3}
                     className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none overflow-hidden"
-                    placeholder={isTechRole 
-                      ? "e.g., JavaScript, React, Node.js, Python" 
-                      : "e.g., Leadership, Communication, Project Management"
+                    placeholder={
+                      isTechRole
+                        ? "e.g., JavaScript, React, Node.js, Python"
+                        : "e.g., Leadership, Communication, Project Management"
                     }
-                    style={{ minHeight: '60px' }}
+                    style={{ minHeight: "60px" }}
                   />
-                  <p className="text-xs text-slate-500 mt-1">Separate skills with commas</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Separate skills with commas
+                  </p>
                 </div>
 
                 {/* Phone */}
@@ -696,8 +844,10 @@ export const ProfileSetup = () => {
 
                 {/* Social Links - Conditional */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-slate-700">Professional Links</h3>
-                  
+                  <h3 className="text-sm font-medium text-slate-700">
+                    Professional Links
+                  </h3>
+
                   {/* LinkedIn - Always shown */}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -761,14 +911,25 @@ export const ProfileSetup = () => {
           <div className="flex items-center justify-between">
             {step === 1 ? (
               <>
-                <div></div>
-                <Button 
-                  type="button" 
+                {!resume && !useExistingResume ? (
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="flex items-center justify-center px-4 py-2 bg-white text-slate-700 font-medium border border-slate-200 rounded-lg shadow-sm hover:shadow hover:bg-slate-50 transition-all"
+                  >
+                    Continue without resume
+                    <ArrowRight size={16} className="ml-2" />
+                  </button>
+                ) : (
+                  <div></div>
+                )}
+                <Button
+                  type="button"
                   onClick={handleNext}
                   disabled={parsingResume || (!resume && !useExistingResume)}
                   isLoading={parsingResume}
                 >
-                  {parsingResume ? 'Analyzing...' : 'Analyze & Continue'}
+                  {parsingResume ? "Analyzing..." : "Analyze & Continue"}
                   {!parsingResume && <ArrowRight size={16} className="ml-2" />}
                 </Button>
               </>
