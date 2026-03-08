@@ -14,6 +14,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
+import { ProctoredInterviewBanner } from "./ProctoredInterviewBanner";
 
 // Dashboard Header Component
 export const DashboardHeader = ({ onMenuClick }) => {
@@ -166,6 +167,9 @@ export const Dashboard = ({
           </div>
         </div>
 
+        {/* Proctored Interview Banner */}
+        <ProctoredInterviewBanner variant="full" />
+
         {/* Section Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -243,6 +247,12 @@ export const Dashboard = ({
                   Mention a role and the AI will customize the session for you.
                 </p>
               </button>
+
+              {/* Option 4: Proctored Interview */}
+              <ProctoredInterviewBanner
+                variant="card"
+                className="md:col-span-3"
+              />
             </div>
           </div>
         ) : (

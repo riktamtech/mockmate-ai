@@ -9,6 +9,7 @@ const aiRoutes = require("./routes/aiRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const audioRoutes = require("./routes/audioRoutes");
 const userRoutes = require("./routes/userRoutes");
+const proctoredInterviewRoutes = require("./routes/proctoredInterviewRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
 const app = express();
@@ -32,6 +33,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/audio", audioRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/proctored", proctoredInterviewRoutes);
 
 // Health Check
 app.get("/", (req, res) => {

@@ -1176,6 +1176,238 @@ exports.generateSpeechStream = async (req, res) => {
   }
 };
 
+// ─── Classify Role (Technical vs Non-Technical + Suggested Skills) ──
+// Uses 2 parallel gemini-2.0-flash-lite calls for fast, rich results:
+//   Call 1: classification + 6 core skills
+//   Call 2: 6-8 additional/niche skills (different angle + higher temperature)
+// Total latency = max(call1, call2) ≈ single call time, but yields 6-15 skills.
+exports.classifyRole = async (req, res) => {
+  const { role, experience } = req.body;
+
+  if (!role) {
+    return res.status(400).json({ error: "Role is required" });
+  }
+
+  const expSuffix = experience ? ` (${experience} exp)` : "";
+  const model = "gemini-2.0-flash-lite";
+
+  // Helper to safely parse JSON from a Gemini response
+  const safeParse = (response) => {
+    if (!response?.text) return null;
+    try {
+      return JSON.parse(response.text);
+    } catch (_) {
+      const m = response.text.match(/\{[\s\S]*\}/);
+      if (m)
+        try {
+          return JSON.parse(m[0]);
+        } catch (_) {}
+    }
+    return null;
+  };
+
+  try {
+    // Call 1: Classification + core skills
+    const classifyPromise = ai.models.generateContent({
+      model,
+      contents: `Classify "${role}"${expSuffix} and suggest core interview skills.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            isTechnical: {
+              type: Type.BOOLEAN,
+              description:
+                "Whether this role is primarily technical (coding, engineering, data science, IT, DevOps) or non-technical (management, sales, HR, marketing, design)",
+            },
+            roleCategory: {
+              type: Type.STRING,
+              enum: [
+                "engineering",
+                "data",
+                "devops",
+                "design",
+                "product",
+                "management",
+                "sales",
+                "marketing",
+                "hr",
+                "finance",
+                "operations",
+                "support",
+                "other",
+              ],
+              description: "The broad category this role falls into",
+            },
+            suggestedSkills: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description:
+                "6 core skills for this role assessed in interviews. Be specific (e.g. 'React.js' not 'JavaScript')",
+            },
+          },
+          required: ["isTechnical", "roleCategory", "suggestedSkills"],
+        },
+        temperature: 0.1,
+        maxOutputTokens: 256,
+      },
+    });
+
+    // Call 2: Additional/niche skills (different prompt angle, higher temp for variety)
+    const extraSkillsPromise = ai.models.generateContent({
+      model,
+      contents: `For a "${role}"${expSuffix} interview, list additional niche and advanced skills beyond the obvious ones. Include tools, frameworks, methodologies, and soft skills.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            skills: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description:
+                "6-8 additional specific skills, tools, frameworks, or methodologies",
+            },
+          },
+          required: ["skills"],
+        },
+        temperature: 0.5,
+        maxOutputTokens: 200,
+      },
+    });
+
+    // Fire both in parallel
+    const [classifyResult, extraResult] = await Promise.allSettled([
+      classifyPromise,
+      extraSkillsPromise,
+    ]);
+
+    // Parse Call 1 (required)
+    const primary =
+      classifyResult.status === "fulfilled"
+        ? safeParse(classifyResult.value)
+        : null;
+
+    if (!primary || !primary.suggestedSkills) {
+      throw new Error("Classification call failed");
+    }
+
+    // Parse Call 2 (optional enrichment)
+    const extra =
+      extraResult.status === "fulfilled" ? safeParse(extraResult.value) : null;
+
+    // Merge & deduplicate skills
+    if (extra?.skills?.length > 0) {
+      const seen = new Set(primary.suggestedSkills.map((s) => s.toLowerCase()));
+      for (const skill of extra.skills) {
+        const key = skill.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          primary.suggestedSkills.push(skill);
+        }
+      }
+    }
+
+    // Cap at 15 skills max
+    primary.suggestedSkills = primary.suggestedSkills.slice(0, 15);
+
+    return res.json(primary);
+  } catch (error) {
+    console.error("Role Classification Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ─── Suggest Roles based on user profile (AI-powered) ──────────────
+exports.suggestRoles = async (req, res) => {
+  const {
+    currentRole,
+    targetRole,
+    skills,
+    experienceLevel,
+    yearsOfExperience,
+  } = req.body;
+
+  // If no meaningful profile data, return empty so frontend uses defaults
+  const hasProfile =
+    currentRole?.trim() ||
+    targetRole?.trim() ||
+    (Array.isArray(skills) && skills.length > 0);
+
+  if (!hasProfile) {
+    return res.json({ suggestedRoles: [], fromProfile: false });
+  }
+
+  try {
+    // Use gemini-2.0-flash-lite for fast (<1s) responses.
+    // gemini-3-flash-preview is a thinking model that ignores responseMimeType,
+    // generates "Here is the JSON..." preamble, and takes 5-6 seconds.
+    const profileParts = [];
+    if (currentRole?.trim())
+      profileParts.push(`Current: ${currentRole.trim()}`);
+    if (targetRole?.trim()) profileParts.push(`Target: ${targetRole.trim()}`);
+    if (skills?.length > 0) profileParts.push(`Skills: ${skills.join(", ")}`);
+    if (experienceLevel) profileParts.push(`Level: ${experienceLevel}`);
+    if (yearsOfExperience !== undefined)
+      profileParts.push(`${yearsOfExperience} yrs exp`);
+
+    const prompt = `Profile: ${profileParts.join(" | ")}\n\nSuggest 6-8 specific interview role titles (e.g. "Senior React Developer") this person should practice for. Include their current/target role if provided.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash-lite",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            suggestedRoles: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description:
+                "6-8 specific interview role titles ordered by relevance",
+            },
+          },
+          required: ["suggestedRoles"],
+        },
+        temperature: 0.3,
+        maxOutputTokens: 256,
+      },
+    });
+
+    if (response.text) {
+      try {
+        const result = JSON.parse(response.text);
+        if (result.suggestedRoles?.length > 0) {
+          return res.json({ ...result, fromProfile: true });
+        }
+      } catch (_) {
+        // Fallback: extract JSON from possible conversational wrapping
+        const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            const result = JSON.parse(jsonMatch[0]);
+            if (result.suggestedRoles?.length > 0) {
+              return res.json({ ...result, fromProfile: true });
+            }
+          } catch (_) {}
+        }
+        console.warn(
+          "Role Suggestion: Could not parse response:",
+          response.text.substring(0, 200),
+        );
+      }
+    }
+
+    res.json({ suggestedRoles: [], fromProfile: false });
+  } catch (error) {
+    console.error("Role Suggestion Error:", error);
+    // Return empty on failure so frontend falls back to defaults
+    res.json({ suggestedRoles: [], fromProfile: false });
+  }
+};
+
 // ─── Backup: Gemini TTS (Emergency switch) ─────────────────────────
 exports.generateSpeechGemini = async (req, res) => {
   const { text, language = "English" } = req.body;

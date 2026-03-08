@@ -8,6 +8,7 @@ import {
   FileText,
   Settings,
   ChartNoAxesCombined,
+  Sparkles,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppStore } from "../store/useAppStore";
@@ -46,6 +47,12 @@ export const SideDrawer = ({ isOpen, onClose }) => {
       icon: PlayCircle,
       label: "Practice Interview",
       path: "/mockmate/candidate/practice",
+    },
+    {
+      icon: Sparkles,
+      label: "Proctored Interview",
+      path: "/mockmate/candidate/proctored-interview",
+      badge: "NEW",
     },
     {
       icon: Settings,
@@ -110,9 +117,20 @@ export const SideDrawer = ({ isOpen, onClose }) => {
               >
                 <item.icon
                   size={20}
-                  className={isActive ? "text-blue-600" : "text-slate-400"}
+                  className={
+                    isActive
+                      ? "text-blue-600"
+                      : item.badge
+                        ? "text-amber-500"
+                        : "text-slate-400"
+                  }
                 />
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {item.badge && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full animate-pulse">
+                    {item.badge}
+                  </span>
+                )}
               </button>
             );
           })}

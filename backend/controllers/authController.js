@@ -257,6 +257,19 @@ exports.getMe = async (req, res) => {
       email: req.user.email,
       isAdmin: req.user.isAdmin,
       profileCompleted: req.user.profileCompleted,
+      phone: req.user.phone,
+      currentRole: req.user.currentRole,
+      targetRole: req.user.targetRole,
+      skills: req.user.skills,
+      experienceLevel: req.user.experienceLevel,
+      yearsOfExperience: req.user.yearsOfExperience,
+      roleType: req.user.roleType,
+      resumeUrl: req.user.resumeUrl,
+      resumeS3Key: req.user.resumeS3Key,
+      resumeFileName: req.user.resumeFileName,
+      linkedinUrl: req.user.linkedinUrl,
+      githubUrl: req.user.githubUrl,
+      portfolioUrl: req.user.portfolioUrl,
     });
   } catch (error) {
     console.error("GetMe error:", error.message);
