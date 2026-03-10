@@ -658,6 +658,7 @@ export const ProctoredReport = () => {
     [interview],
   );
   const cheating = useMemo(() => interview?.cheatingScore || {}, [interview]);
+  const isHighCheating = useMemo(() => (cheating?.likelihood_of_cheating || 0) > 40, [cheating]);
   const messages = useMemo(() => getMessages(interview), [interview]);
 
   const overallScore = useMemo(() => {
@@ -775,8 +776,10 @@ export const ProctoredReport = () => {
         doc.text(`Overall Score: ${overallScore}%`, M, y);
         y += 6;
       }
-      doc.text(`Trust Score: ${trustScore}%`, M, y);
-      y += 6;
+      if (!isHighCheating) {
+        doc.text(`Trust Score: ${trustScore}%`, M, y);
+        y += 6;
+      }
       doc.text(`Questions Evaluated: ${questions.length}`, M, y);
       y += 6;
       if (avgScore != null) {
@@ -968,16 +971,26 @@ export const ProctoredReport = () => {
         doc.addPage();
         y = M;
       }
-      printH("Trust & Integrity");
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Trust Score: ${trustScore}%`, M, y);
-      y += 6;
-      if (cheating.verdict) {
-        doc.text(`Verdict: ${cheating.verdict}`, M, y);
+      if (isHighCheating) {
+        printH("Attention!");
+        doc.setFontSize(10);
+        doc.setTextColor(245, 158, 11);
+        printP(
+          "Please try to remain visible and avoid looking away from the camera during the interviews. Excessive movements or looking away could mistakenly be flagged by our AI as suspicious activity. Keep practicing and aim for a smooth, focused session!"
+        );
         y += 6;
+      } else {
+        printH("Trust & Integrity");
+        doc.setFontSize(10);
+        doc.setTextColor(71, 85, 105);
+        doc.text(`Trust Score: ${trustScore}%`, M, y);
+        y += 6;
+        if (cheating.verdict) {
+          doc.text(`Verdict: ${cheating.verdict}`, M, y);
+          y += 6;
+        }
+        if (cheating.summary) printP(cheating.summary);
       }
-      if (cheating.summary) printP(cheating.summary);
 
       doc.save(
         `report_${(opening?.title || "interview").replace(/\s+/g, "_")}.pdf`,
@@ -1003,6 +1016,7 @@ export const ProctoredReport = () => {
     isDownloading,
     opening,
     messages,
+    isHighCheating,
   ]);
 
   // ── PDF: Transcript ────────────────────────────────────────────
@@ -1164,7 +1178,7 @@ export const ProctoredReport = () => {
                   label: "Overall Score",
                   dec: 1,
                 },
-                { value: trustScore, suffix: "%", label: "Trust Score" },
+                !isHighCheating && { value: trustScore, suffix: "%", label: "Trust Score" },
                 {
                   value: questions.length || opening?.maxQuestions || 0,
                   label: "Questions",
@@ -1241,14 +1255,14 @@ export const ProctoredReport = () => {
                   <ScoreGauge score={overallScore} size={160} />
                   <div className="grid grid-cols-2 gap-3 w-full">
                     {[
-                      {
+                      !isHighCheating ? {
                         label: "Trust",
                         value: trustScore,
                         suffix: "%",
                         color: "text-blue-600",
                         bg: "bg-blue-50",
                         border: "border-blue-200",
-                      },
+                      } : null,
                       {
                         label: "Questions",
                         value: questions.length,
@@ -1256,7 +1270,7 @@ export const ProctoredReport = () => {
                         bg: "bg-amber-50",
                         border: "border-amber-200",
                       },
-                    ].map((s, i) => (
+                    ].filter(Boolean).map((s, i) => (
                       <div
                         key={i}
                         className={`${s.bg} border ${s.border} rounded-xl p-3 text-center`}
@@ -1405,37 +1419,60 @@ export const ProctoredReport = () => {
             )}
 
             {/* Trust & Integrity */}
-            <Section
-              icon={Shield}
-              title="Trust & Integrity"
-              iconBg="bg-teal-50"
-              iconColor="text-teal-600"
-            >
-              <div className="flex flex-col md:flex-row items-start gap-6">
-                <TrustMeter score={trustScore} />
-                <div className="flex-1">
-                  {cheating.verdict && (
-                    <div
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold mb-3 ${
-                        cheating.verdict === "HIGH"
-                          ? "bg-rose-50 text-rose-600 border border-rose-200"
-                          : cheating.verdict === "MEDIUM"
-                            ? "bg-amber-50 text-amber-600 border border-amber-200"
-                            : "bg-emerald-50 text-emerald-600 border border-emerald-200"
-                      }`}
-                    >
-                      <ShieldAlert size={12} /> Cheating Likelihood:{" "}
-                      {cheating.verdict}
-                    </div>
-                  )}
-                  {cheating.summary && (
-                    <p className="text-sm text-slate-500 leading-relaxed">
-                      {cheating.summary}
+            {isHighCheating ? (
+              <Section
+                icon={ShieldAlert}
+                title="Integrity Warning"
+                iconBg="bg-amber-50"
+                iconColor="text-amber-600"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-amber-100/50 rounded-xl text-amber-600 flex-shrink-0">
+                    <ShieldAlert size={32} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 mb-1">
+                      Action Required
+                    </h4>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      Please try to remain visible and avoid looking away from the camera during the interview. Excessive movements or looking away could mistakenly be flagged by our AI as suspicious activity. Keep practicing and aim for a smooth, focused session!
                     </p>
-                  )}
+                  </div>
                 </div>
-              </div>
-            </Section>
+              </Section>
+            ) : (
+              <Section
+                icon={Shield}
+                title="Trust & Integrity"
+                iconBg="bg-teal-50"
+                iconColor="text-teal-600"
+              >
+                <div className="flex flex-col md:flex-row items-start gap-6">
+                  <TrustMeter score={trustScore} />
+                  <div className="flex-1">
+                    {cheating.verdict && (
+                      <div
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold mb-3 ${
+                          cheating.verdict === "HIGH"
+                            ? "bg-rose-50 text-rose-600 border border-rose-200"
+                            : cheating.verdict === "MEDIUM"
+                              ? "bg-amber-50 text-amber-600 border border-amber-200"
+                              : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                        }`}
+                      >
+                        <ShieldAlert size={12} /> Cheating Likelihood:{" "}
+                        {cheating.verdict}
+                      </div>
+                    )}
+                    {cheating.summary && (
+                      <p className="text-sm text-slate-500 leading-relaxed">
+                        {cheating.summary}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Section>
+            )}
 
             {/* Interview Details */}
             <Section

@@ -18,6 +18,9 @@ import {
   Eye,
   TrendingUp,
   Bell,
+  Loader2,
+  RefreshCw,
+  Brain,
 } from "lucide-react";
 import { Button } from "./ui/Button";
 import { ConsentModal } from "./ConsentModal";
@@ -145,11 +148,13 @@ export const ProctoredInterviewInfo = () => {
     interview,
     hasExistingInterview,
     isCompleted,
+    isEvaluationPending,
     saveConsent,
     actionLoading,
     loading,
     startOver,
     consentAlreadyGiven,
+    refreshEvaluation,
   } = useProctoredInterview();
   const [ackChecked, setAckChecked] = useState(false);
   const [showConsent, setShowConsent] = useState(false);
@@ -256,99 +261,245 @@ export const ProctoredInterviewInfo = () => {
 
         {/* Completed banner */}
         {isCompleted && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in-up">
+          <div
+            className={`${
+              isEvaluationPending
+                ? "bg-indigo-50 border-indigo-200"
+                : "bg-emerald-50 border-emerald-200"
+            } border rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in-up`}
+          >
             <div>
-              <p className="font-semibold text-emerald-900 flex items-center gap-1.5">
-                <CheckCircle2 size={18} /> Interview Completed
-              </p>
-              <p className="text-sm text-emerald-600">
-                View your detailed evaluation report
-              </p>
+              {isEvaluationPending ? (
+                <>
+                  <p className="font-semibold text-indigo-900 flex items-center gap-1.5">
+                    <Brain size={18} className="animate-pulse" /> AI is
+                    Evaluating Your Interview
+                  </p>
+                  <p className="text-sm text-indigo-600">
+                    Your results will be ready soon. Keep practicing meanwhile!
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-emerald-900 flex items-center gap-1.5">
+                    <CheckCircle2 size={18} /> Interview Completed
+                  </p>
+                  <p className="text-sm text-emerald-600">
+                    View your detailed evaluation report
+                  </p>
+                </>
+              )}
             </div>
-            <Button
-              onClick={() =>
-                navigate("/mockmate/candidate/proctored-interview/report")
-              }
-              size="sm"
-            >
-              View Report <ArrowRight size={14} className="ml-1" />
-            </Button>
+            {isEvaluationPending ? (
+              <button
+                onClick={refreshEvaluation}
+                disabled={actionLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-indigo-200 rounded-lg text-sm text-indigo-600 hover:bg-indigo-50 transition-all disabled:opacity-50"
+              >
+                {actionLoading ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={14} />
+                )}
+                Check for Results
+              </button>
+            ) : (
+              <Button
+                onClick={() =>
+                  navigate("/mockmate/candidate/proctored-interview/report")
+                }
+                size="sm"
+              >
+                View Report <ArrowRight size={14} className="ml-1" />
+              </Button>
+            )}
           </div>
         )}
 
         {/* ── Completed State: Celebratory Post-Interview Section ── */}
         {isCompleted ? (
           <>
-            {/* Celebration Hero */}
-            <div className="text-center space-y-4 animate-fade-in-up">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                <CheckCircle2 size={16} /> Interview Completed
-              </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
-                Great Job! 🎉{" "}
-                <span className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-clip-text text-transparent">
-                  You Did It!
-                </span>
-              </h1>
-              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Your proctored interview is complete. Your profile and scores
-                are now being shared with top hiring companies. Here's what
-                happens next:
-              </p>
-            </div>
-
-            {/* Post-Completion Motivational Cards */}
-            <div className="grid md:grid-cols-2 gap-4">
-              {POST_COMPLETION_CARDS.map((card, i) => {
-                const c = colorMap[card.color];
-                return (
-                  <div
-                    key={i}
-                    className={`flex items-start gap-4 p-5 bg-white border ${c.border} rounded-xl hover:shadow-md transition-shadow animate-fade-in-up`}
-                    style={{ animationDelay: `${i * 0.1}s` }}
-                  >
-                    <div className={`p-2.5 ${c.bg} rounded-xl flex-shrink-0`}>
-                      <card.icon size={22} className={c.text} />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900">
-                        {card.title}
-                      </h3>
-                      <p className="text-sm text-slate-500 mt-0.5">
-                        {card.desc}
-                      </p>
-                    </div>
+            {isEvaluationPending ? (
+              /* ── Evaluation Pending State ── */
+              <>
+                {/* Evaluation In Progress Hero */}
+                <div className="text-center space-y-4 animate-fade-in-up">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
+                    <Brain size={16} className="animate-pulse" /> Evaluation in
+                    Progress
                   </div>
-                );
-              })}
-            </div>
-
-            {/* View Report CTA */}
-            <div className="bg-white border border-emerald-200 rounded-xl p-6 animate-fade-in-up">
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className="p-4 bg-emerald-50 rounded-full">
-                  <Eye size={32} className="text-emerald-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">
-                    Your Evaluation Report Is Ready
-                  </h3>
-                  <p className="text-sm text-slate-500 mt-1">
-                    See your detailed scores, strengths, and areas for
-                    improvement
+                  <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+                    Great Job! 🎉{" "}
+                    <span className="bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
+                      Almost There!
+                    </span>
+                  </h1>
+                  <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                    Your proctored interview is complete! Our AI is now
+                    evaluating your responses. Results will be ready soon — keep
+                    practicing meanwhile.
                   </p>
                 </div>
-                <Button
-                  onClick={() =>
-                    navigate("/mockmate/candidate/proctored-interview/report")
-                  }
-                  className="px-8 py-3 text-base bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-                >
-                  <Eye size={18} className="mr-2" /> View Your Report{" "}
-                  <ArrowRight size={18} className="ml-2" />
-                </Button>
-              </div>
-            </div>
+
+                {/* Motivational Cards (modified for pending state) */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {POST_COMPLETION_CARDS.map((card, i) => {
+                    const c = colorMap[card.color];
+                    // Replace the "Your Evaluation Is Ready" card
+                    const overrideCard =
+                      card.title === "Your Evaluation Is Ready"
+                        ? {
+                            ...card,
+                            title: "Evaluation Coming Soon",
+                            desc: "Your detailed scores and feedback are being generated by our AI. Check back shortly!",
+                          }
+                        : card;
+                    return (
+                      <div
+                        key={i}
+                        className={`flex items-start gap-4 p-5 bg-white border ${c.border} rounded-xl hover:shadow-md transition-shadow animate-fade-in-up`}
+                        style={{ animationDelay: `${i * 0.1}s` }}
+                      >
+                        <div
+                          className={`p-2.5 ${c.bg} rounded-xl flex-shrink-0`}
+                        >
+                          <card.icon size={22} className={c.text} />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900">
+                            {overrideCard.title}
+                          </h3>
+                          <p className="text-sm text-slate-500 mt-0.5">
+                            {overrideCard.desc}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Evaluation Progress CTA (replaces View Report CTA) */}
+                <div className="bg-white border border-indigo-200 rounded-xl p-6 animate-fade-in-up">
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="relative">
+                      <div className="p-4 bg-indigo-50 rounded-full">
+                        <Brain size={32} className="text-indigo-600" />
+                      </div>
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full animate-ping" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">
+                        Evaluation in Progress
+                      </h3>
+                      <p className="text-sm text-slate-500 mt-1">
+                        Our AI is analyzing your responses and generating
+                        detailed feedback
+                      </p>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="w-full max-w-xs">
+                      <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 rounded-full animate-evaluation-progress" />
+                      </div>
+                    </div>
+                    <button
+                      onClick={refreshEvaluation}
+                      disabled={actionLoading}
+                      className="flex items-center gap-2 px-6 py-3 bg-white border border-indigo-200 rounded-xl text-sm font-medium text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all shadow-sm disabled:opacity-50"
+                    >
+                      {actionLoading ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <RefreshCw size={16} />
+                      )}
+                      Check for Results
+                    </button>
+                    <p className="text-xs text-slate-400">
+                      We automatically check periodically, or click above to
+                      check now.
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* ── Evaluation Ready State (original) ── */
+              <>
+                {/* Celebration Hero */}
+                <div className="text-center space-y-4 animate-fade-in-up">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                    <CheckCircle2 size={16} /> Interview Completed
+                  </div>
+                  <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
+                    Great Job! 🎉{" "}
+                    <span className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-clip-text text-transparent">
+                      You Did It!
+                    </span>
+                  </h1>
+                  <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                    Your proctored interview is complete. Your profile and scores
+                    are now being shared with top hiring companies. Here's what
+                    happens next:
+                  </p>
+                </div>
+
+                {/* Post-Completion Motivational Cards */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {POST_COMPLETION_CARDS.map((card, i) => {
+                    const c = colorMap[card.color];
+                    return (
+                      <div
+                        key={i}
+                        className={`flex items-start gap-4 p-5 bg-white border ${c.border} rounded-xl hover:shadow-md transition-shadow animate-fade-in-up`}
+                        style={{ animationDelay: `${i * 0.1}s` }}
+                      >
+                        <div
+                          className={`p-2.5 ${c.bg} rounded-xl flex-shrink-0`}
+                        >
+                          <card.icon size={22} className={c.text} />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900">
+                            {card.title}
+                          </h3>
+                          <p className="text-sm text-slate-500 mt-0.5">
+                            {card.desc}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* View Report CTA */}
+                <div className="bg-white border border-emerald-200 rounded-xl p-6 animate-fade-in-up">
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="p-4 bg-emerald-50 rounded-full">
+                      <Eye size={32} className="text-emerald-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">
+                        Your Evaluation Report Is Ready
+                      </h3>
+                      <p className="text-sm text-slate-500 mt-1">
+                        See your detailed scores, strengths, and areas for
+                        improvement
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() =>
+                        navigate(
+                          "/mockmate/candidate/proctored-interview/report",
+                        )
+                      }
+                      className="px-8 py-3 text-base bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                    >
+                      <Eye size={18} className="mr-2" /> View Your Report{" "}
+                      <ArrowRight size={18} className="ml-2" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </>
         ) : (
           <>

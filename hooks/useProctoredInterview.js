@@ -247,9 +247,12 @@ export function useProctoredInterview() {
       try {
         const result = await api.checkProctoredCompletion();
         if (result.completed) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
           setProctoredInterview(result.interview);
+          // Only stop polling when evaluation is also ready
+          if (!result.evaluationPending) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
         }
       } catch (err) {
         console.warn("Completion poll failed:", err.message);
@@ -312,10 +315,36 @@ export function useProctoredInterview() {
     [proctoredInterview],
   );
 
+  const isEvaluationPending = useMemo(
+    () =>
+      proctoredInterview?.status === "COMPLETED" &&
+      !proctoredInterview?.evaluation,
+    [proctoredInterview],
+  );
+
   const consentAlreadyGiven = useMemo(
     () => proctoredInterview?.consentAcknowledged === true,
     [proctoredInterview],
   );
+
+  // Manual refresh for evaluation status (powers the "Refresh" button)
+  const refreshEvaluation = useCallback(async () => {
+    try {
+      setActionLoading(true);
+      setError(null);
+      const { interview } = await api.getProctoredStatus();
+      setProctoredInterview(interview);
+      if (interview?.currentStep) {
+        setProctoredStep(interview.currentStep);
+      }
+      return interview;
+    } catch (err) {
+      setError(err.message);
+      return null;
+    } finally {
+      setActionLoading(false);
+    }
+  }, [setProctoredInterview, setProctoredStep]);
 
   return {
     // State
@@ -328,6 +357,7 @@ export function useProctoredInterview() {
     isCompleted,
     isInProgress,
     isScheduled,
+    isEvaluationPending,
     hasExistingInterview,
     interviewUrl,
     consentAlreadyGiven,
@@ -346,6 +376,7 @@ export function useProctoredInterview() {
     startPolling,
     stopPolling,
     resumeInterviewAction,
+    refreshEvaluation,
     setError,
   };
 }

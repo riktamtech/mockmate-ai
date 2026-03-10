@@ -376,13 +376,54 @@ export async function speak(
 
       const contentType = response.headers.get("content-type");
 
-      // CASE 1: Cache Hit (JSON)
+      // CASE 1: Cache Hit or Client-Side TTS Signal (JSON)
       if (contentType && contentType.includes("application/json")) {
         const data = await response.json();
+
+        // Cache hit — play from URL
         if (data.audioUrl) {
-          _lastGeneratedAudioUrl = data.audioUrl; // Cache for frontend reuse
+          _lastGeneratedAudioUrl = data.audioUrl;
           const playResult = await playAudioUrl(data.audioUrl);
-          resolve(playResult); // Resolve speak promise explicitly since currentResolve has been overwritten
+          resolve(playResult);
+          return;
+        }
+
+        // Client-side TTS signal — backend says to handle TTS in browser
+        if (data.useClientTts) {
+          console.log(
+            `[TTS Player] Backend signaled client-side TTS: engine=${data.engine}`,
+          );
+          const clientText = data.text || text;
+          try {
+            if (data.engine === "web-speech-api") {
+              await speakWithWebSpeechAPI(clientText, language);
+            } else if (data.engine === "gemini-tts") {
+              await speakWithGeminiTTS(clientText, language);
+            } else {
+              // Unknown engine, try WebSpeech first, then Gemini
+              try {
+                await speakWithWebSpeechAPI(clientText, language);
+              } catch (_) {
+                await speakWithGeminiTTS(clientText, language);
+              }
+            }
+          } catch (clientErr) {
+            console.error(
+              "[TTS Player] Client-side TTS failed:",
+              clientErr,
+            );
+            // Last resort: try the remaining fallback
+            try {
+              if (data.engine === "web-speech-api") {
+                await speakWithGeminiTTS(clientText, language);
+              } else {
+                await speakWithWebSpeechAPI(clientText, language);
+              }
+            } catch (_) {
+              console.error("[TTS Player] All client-side TTS failed");
+            }
+          }
+          finalizePlayback({ completed: true });
           return;
         }
       }

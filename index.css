@@ -184,6 +184,34 @@
   animation: shimmer 1.5s linear infinite;
 }
 
+/* Evaluation progress animation */
+@keyframes evaluation-progress {
+  0% {
+    width: 15%;
+    margin-left: 0%;
+  }
+  25% {
+    width: 45%;
+    margin-left: 20%;
+  }
+  50% {
+    width: 25%;
+    margin-left: 55%;
+  }
+  75% {
+    width: 40%;
+    margin-left: 30%;
+  }
+  100% {
+    width: 15%;
+    margin-left: 0%;
+  }
+}
+
+.animate-evaluation-progress {
+  animation: evaluation-progress 3s ease-in-out infinite;
+}
+
 /* ── Interview Join Flow Animations ──────────────────────────────── */
 
 @keyframes scale-bounce-in {

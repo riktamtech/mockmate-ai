@@ -32,6 +32,7 @@ import {
   PlayCircle,
   MousePointerClick,
   AlertTriangle,
+  Brain,
 } from "lucide-react";
 import { Button } from "./ui/Button";
 import { useProctoredInterview } from "../hooks/useProctoredInterview";
@@ -351,6 +352,7 @@ export const ProctoredChatInterface = () => {
     isCompleted,
     isInProgress,
     isScheduled,
+    isEvaluationPending,
     interviewUrl,
     fetchStatus,
     findOrCreateOpening,
@@ -363,6 +365,7 @@ export const ProctoredChatInterface = () => {
     stopPolling,
     rescheduleInterview,
     resumeInterviewAction,
+    refreshEvaluation,
     setError,
   } = useProctoredInterview();
 
@@ -825,8 +828,11 @@ export const ProctoredChatInterface = () => {
 
   // ── Join interview ──────────────────────────────────────────────────
   const handleJoinInterview = useCallback(async () => {
-    const url = interview?.interviewUrl;
+    let url = interview?.interviewUrl;
     if (!url) return;
+    
+    // Append source=mockmate to the URL
+    url = url.includes("?") ? `${url}&source=mockmate` : `${url}?source=mockmate`;
 
     try {
       // Open the tab FIRST, synchronously — browsers block window.open
@@ -849,8 +855,12 @@ export const ProctoredChatInterface = () => {
 
   // ── Reopen interview tab ────────────────────────────────────────────
   const handleReopenInterview = useCallback(() => {
-    const url = interview?.interviewUrl;
+    let url = interview?.interviewUrl;
     if (!url) return;
+
+    // Append source=mockmate to the URL
+    url = url.includes("?") ? `${url}&source=mockmate` : `${url}?source=mockmate`;
+
     window.open(url, "_blank", "noopener,noreferrer");
   }, [interview]);
 
@@ -858,9 +868,20 @@ export const ProctoredChatInterface = () => {
   useEffect(() => {
     if (isCompleted && chatStep === CHAT_STEPS.IN_PROGRESS) {
       setChatStep(CHAT_STEPS.COMPLETED);
+      // Only stop polling if evaluation is ready; keep polling if pending
+      if (!isEvaluationPending) {
+        stopPolling();
+      }
+    }
+    // If evaluation arrives while on COMPLETED step, stop polling
+    if (
+      isCompleted &&
+      chatStep === CHAT_STEPS.COMPLETED &&
+      !isEvaluationPending
+    ) {
       stopPolling();
     }
-  }, [isCompleted, chatStep, stopPolling]);
+  }, [isCompleted, isEvaluationPending, chatStep, stopPolling]);
 
   // ── Start over ──────────────────────────────────────────────────────
   const handleStartOver = useCallback(async () => {
@@ -1046,7 +1067,9 @@ export const ProctoredChatInterface = () => {
                 {chatStep === CHAT_STEPS.IN_PROGRESS
                   ? "Interview in Progress"
                   : chatStep === CHAT_STEPS.COMPLETED
-                    ? "Interview Complete"
+                    ? isEvaluationPending
+                      ? "Evaluating Interview..."
+                      : "Interview Complete"
                     : chatStep === CHAT_STEPS.READY_TO_JOIN
                       ? "Ready to Join"
                       : "Setting up your interview"}
@@ -1392,12 +1415,7 @@ export const ProctoredChatInterface = () => {
 
           {/* Schedule type */}
           {chatStep === CHAT_STEPS.SCHEDULE_TYPE && (
-            <div className="ml-11 space-y-3 animate-fade-in-up">
-              <BotMessage>
-                <p className="text-sm text-slate-700">
-                  When would you like to take the interview?
-                </p>
-              </BotMessage>
+            <div className="ml-11 space-y-3 animate-fade-in-up mt-2">
               <div className="ml-11 grid sm:grid-cols-2 gap-3 max-w-md">
                 <button
                   onClick={() => handleSchedule(true)}
@@ -1408,7 +1426,7 @@ export const ProctoredChatInterface = () => {
                   </div>
                   <div className="text-center">
                     <p className="font-semibold text-slate-900">Start Now</p>
-                    <p className="text-xs text-slate-500">Begin in 2 minutes</p>
+                    <p className="text-xs text-slate-500">Begin in a minute</p>
                   </div>
                 </button>
 
@@ -1794,70 +1812,169 @@ export const ProctoredChatInterface = () => {
 
           {/* Completed */}
           {chatStep === CHAT_STEPS.COMPLETED && (
-            <div className="flex flex-col items-center justify-center py-12 gap-6 animate-fade-in-up">
-              <div className="p-4 bg-emerald-50 rounded-full">
-                <CheckCircle2 size={40} className="text-emerald-600" />
-              </div>
-              <div className="text-center">
-                <h2 className="text-xl font-bold text-slate-900">
-                  Interview Completed! 🎉
-                </h2>
-                <p className="text-sm text-slate-500 mt-2 max-w-md">
-                  Great job! Your evaluation is ready. Your profile and scores
-                  are being shared with top hiring companies.
-                </p>
-              </div>
+            <>
+              {/* Evaluation Pending — attractive loading UI */}
+              {isEvaluationPending ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-6 animate-fade-in-up">
+                  {/* Animated brain/sparkles spinner */}
+                  <div className="relative">
+                    <div className="w-20 h-20 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                    <Brain
+                      size={28}
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-indigo-600 animate-pulse"
+                    />
+                  </div>
 
-              {/* Motivational highlights */}
-              <div className="grid sm:grid-cols-3 gap-3 max-w-2xl w-full">
-                <div
-                  className="flex flex-col items-center gap-2 p-4 bg-blue-50 border border-blue-200 rounded-xl text-center animate-fade-in-up"
-                  style={{ animationDelay: "0.1s" }}
-                >
-                  <Bell size={20} className="text-blue-600" />
-                  <p className="text-xs font-semibold text-blue-900">
-                    Recruiters Notified
-                  </p>
-                  <p className="text-[11px] text-blue-600">
-                    Your profile is now visible to hiring partners
-                  </p>
-                </div>
-                <div
-                  className="flex flex-col items-center gap-2 p-4 bg-purple-50 border border-purple-200 rounded-xl text-center animate-fade-in-up"
-                  style={{ animationDelay: "0.2s" }}
-                >
-                  <TrendingUp size={20} className="text-purple-600" />
-                  <p className="text-xs font-semibold text-purple-900">
-                    Better Scores = More Calls
-                  </p>
-                  <p className="text-[11px] text-purple-600">
-                    High scorers get priority placement
-                  </p>
-                </div>
-                <div
-                  className="flex flex-col items-center gap-2 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center animate-fade-in-up"
-                  style={{ animationDelay: "0.3s" }}
-                >
-                  <Sparkles size={20} className="text-emerald-600" />
-                  <p className="text-xs font-semibold text-emerald-900">
-                    Keep Growing
-                  </p>
-                  <p className="text-[11px] text-emerald-600">
-                    Practice more to become even stronger
-                  </p>
-                </div>
-              </div>
+                  <div className="text-center space-y-2">
+                    <h2 className="text-xl font-bold text-slate-900">
+                      Our AI is Evaluating Your Interview…
+                    </h2>
+                    <p className="text-sm text-slate-500 max-w-md">
+                      Your interview is complete! We're generating a detailed
+                      evaluation report with scores, strengths, and areas for
+                      improvement. This usually takes a few minutes.
+                    </p>
+                  </div>
 
-              <Button
-                onClick={() =>
-                  navigate("/mockmate/candidate/proctored-interview/report")
-                }
-                className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-              >
-                <Eye size={18} className="mr-2" /> View Your Report{" "}
-                <ArrowRight size={16} className="ml-1" />
-              </Button>
-            </div>
+                  {/* Pulsing progress indicator */}
+                  <div className="w-64">
+                    <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 rounded-full animate-evaluation-progress" />
+                    </div>
+                    <p className="text-xs text-slate-400 mt-2 text-center">
+                      Analyzing responses & generating insights…
+                    </p>
+                  </div>
+
+                  {/* Motivational cards */}
+                  <div className="grid sm:grid-cols-3 gap-3 max-w-2xl w-full">
+                    <div
+                      className="flex flex-col items-center gap-2 p-4 bg-blue-50 border border-blue-200 rounded-xl text-center animate-fade-in-up"
+                      style={{ animationDelay: "0.1s" }}
+                    >
+                      <Bell size={20} className="text-blue-600" />
+                      <p className="text-xs font-semibold text-blue-900">
+                        Recruiters Will Be Notified
+                      </p>
+                      <p className="text-[11px] text-blue-600">
+                        Your profile will be shared with hiring partners
+                      </p>
+                    </div>
+                    <div
+                      className="flex flex-col items-center gap-2 p-4 bg-purple-50 border border-purple-200 rounded-xl text-center animate-fade-in-up"
+                      style={{ animationDelay: "0.2s" }}
+                    >
+                      <TrendingUp size={20} className="text-purple-600" />
+                      <p className="text-xs font-semibold text-purple-900">
+                        Keep Practicing
+                      </p>
+                      <p className="text-[11px] text-purple-600">
+                        Practice more interviews while you wait
+                      </p>
+                    </div>
+                    <div
+                      className="flex flex-col items-center gap-2 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center animate-fade-in-up"
+                      style={{ animationDelay: "0.3s" }}
+                    >
+                      <Sparkles size={20} className="text-emerald-600" />
+                      <p className="text-xs font-semibold text-emerald-900">
+                        Results Coming Soon
+                      </p>
+                      <p className="text-[11px] text-emerald-600">
+                        Your detailed report will be ready shortly
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Refresh button */}
+                  <button
+                    onClick={refreshEvaluation}
+                    disabled={actionLoading}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-indigo-200 rounded-xl text-sm text-indigo-600 hover:bg-indigo-50 hover:border-indigo-300 transition-all shadow-sm disabled:opacity-50"
+                  >
+                    {actionLoading ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <RefreshCw size={15} />
+                    )}
+                    Check for Results
+                  </button>
+
+                  <p className="text-xs text-slate-400 max-w-sm text-center">
+                    We automatically check every 30 seconds, or click above to
+                    check now.
+                  </p>
+                </div>
+              ) : (
+                /* Evaluation Ready — existing completion UI */
+                <div className="flex flex-col items-center justify-center py-12 gap-6 animate-fade-in-up">
+                  <div className="p-4 bg-emerald-50 rounded-full">
+                    <CheckCircle2 size={40} className="text-emerald-600" />
+                  </div>
+                  <div className="text-center">
+                    <h2 className="text-xl font-bold text-slate-900">
+                      Interview Completed! 🎉
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-2 max-w-md">
+                      Great job! Your evaluation is ready. Your profile and
+                      scores are being shared with top hiring companies.
+                    </p>
+                  </div>
+
+                  {/* Motivational highlights */}
+                  <div className="grid sm:grid-cols-3 gap-3 max-w-2xl w-full">
+                    <div
+                      className="flex flex-col items-center gap-2 p-4 bg-blue-50 border border-blue-200 rounded-xl text-center animate-fade-in-up"
+                      style={{ animationDelay: "0.1s" }}
+                    >
+                      <Bell size={20} className="text-blue-600" />
+                      <p className="text-xs font-semibold text-blue-900">
+                        Recruiters Notified
+                      </p>
+                      <p className="text-[11px] text-blue-600">
+                        Your profile is now visible to hiring partners
+                      </p>
+                    </div>
+                    <div
+                      className="flex flex-col items-center gap-2 p-4 bg-purple-50 border border-purple-200 rounded-xl text-center animate-fade-in-up"
+                      style={{ animationDelay: "0.2s" }}
+                    >
+                      <TrendingUp size={20} className="text-purple-600" />
+                      <p className="text-xs font-semibold text-purple-900">
+                        Better Scores = More Calls
+                      </p>
+                      <p className="text-[11px] text-purple-600">
+                        High scorers get priority placement
+                      </p>
+                    </div>
+                    <div
+                      className="flex flex-col items-center gap-2 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center animate-fade-in-up"
+                      style={{ animationDelay: "0.3s" }}
+                    >
+                      <Sparkles size={20} className="text-emerald-600" />
+                      <p className="text-xs font-semibold text-emerald-900">
+                        Keep Growing
+                      </p>
+                      <p className="text-[11px] text-emerald-600">
+                        Practice more to become even stronger
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={() =>
+                      navigate(
+                        "/mockmate/candidate/proctored-interview/report",
+                      )
+                    }
+                    className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                  >
+                    <Eye size={18} className="mr-2" /> View Your Report{" "}
+                    <ArrowRight size={16} className="ml-1" />
+                  </Button>
+                </div>
+              )}
+            </>
           )}
 
           {/* Error display */}

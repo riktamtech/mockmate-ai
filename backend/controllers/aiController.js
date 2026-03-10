@@ -7,6 +7,7 @@ const {
   uploadAIResponseAudio,
 } = require("../services/s3Service");
 const ttsService = require("../services/ttsService");
+const configService = require("../services/configService");
 
 if (!process.env.GOOGLE_API_KEY) {
   console.error(
@@ -549,6 +550,10 @@ exports.chatStream = async (req, res) => {
         ) {
           Promise.resolve().then(async () => {
             try {
+              // Skip background TTS if active service is client-side
+              const activeSvc = await configService.getActiveTtsService();
+              if (configService.isClientSideService(activeSvc)) return;
+
               const ttsBuffer = await ttsService.synthesizeFull(
                 userContentText,
                 language || "English",
@@ -1002,7 +1007,18 @@ exports.generateSpeechStream = async (req, res) => {
       }
     }
 
-    // 2. Not cached - Generate Stream
+    // 2. Check if active TTS service is client-side (WebSpeechAPI / Gemini)
+    const activeService = await configService.getActiveTtsService();
+    if (configService.isClientSideService(activeService)) {
+      // Signal frontend to handle TTS client-side
+      return res.json({
+        useClientTts: true,
+        engine: activeService,
+        text: text,
+      });
+    }
+
+    // 3. Not cached - Generate Stream via backend TTS engine
     if (!res.headersSent) {
       res.setHeader("Content-Type", "application/octet-stream");
       res.setHeader("Transfer-Encoding", "chunked");
@@ -1016,6 +1032,12 @@ exports.generateSpeechStream = async (req, res) => {
       res,
       language,
     );
+
+    // If TTS engine cascaded to client-side mid-stream (returned null),
+    // the stream was already ended by streamTtsChunks; skip S3 upload
+    if (fullAudioBuffer === null) {
+      return;
+    }
 
     // 3. Robust Background S3 upload + history update with Retries
     if (interviewId && fullAudioBuffer && fullAudioBuffer.length > 0) {

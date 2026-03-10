@@ -214,7 +214,93 @@ const getStatus = asyncHandler(async (req, res) => {
     }
   }
 
-  res.json({ interview });
+  // If the interview is COMPLETED but evaluation is still empty,
+  // re-poll Zinterview to check if the evaluation has arrived.
+  if (
+    interview.status === "COMPLETED" &&
+    interview.reportFetched &&
+    !interview.evaluation &&
+    interview.zinterviewReportId
+  ) {
+    try {
+      const apiResponse = await ZinterviewService.getCandidate(
+        interview.zinterviewReportId,
+      );
+      const report = apiResponse?.report || apiResponse;
+
+      if (report?.evaluation) {
+        const updateFields = {
+          evaluation: report.evaluation,
+          performanceScore: extractPerformanceScore(report.evaluation) || 0,
+          communicationEvaluation: report.communicationEvaluation || "",
+          trustScore: report.trustScore || 0,
+          rawReportPayload: report,
+        };
+
+        // Extract transcript messages if available
+        if (Array.isArray(report.messages) && report.messages.length > 0) {
+          updateFields.messages = report.messages.map((m) => ({
+            role: m.role,
+            content: m?.content,
+            translation: m?.translation ?? "",
+            isAutoSkipped: m?.isAutoSkipped ?? false,
+            isMainQuestion: m?.isMainQuestion ?? false,
+            questionType: m?.questionType ?? "",
+            isInterviewEnded: m?.isInterviewEnded ?? false,
+            duration: m?.duration ?? 0,
+          }));
+        }
+
+        // Try to fetch cheating score if not already fetched
+        if (!interview.cheatingScore?.verdict) {
+          try {
+            const cheatingResponse = await ZinterviewService.getCheatingScore(
+              interview.zinterviewReportId,
+            );
+            if (cheatingResponse?.data) {
+              updateFields.cheatingScore = {
+                likelihood_of_cheating:
+                  cheatingResponse.data.likelihood_of_cheating || 0,
+                summary: cheatingResponse.data.summary || "",
+                verdict: cheatingResponse.data.verdict || "",
+              };
+            }
+          } catch (err) {
+            console.warn("Could not fetch cheating score:", err.message);
+          }
+        }
+
+        // Update ProctoredCandidate with the latest raw payload
+        if (interview.candidate) {
+          await ProctoredCandidate.findByIdAndUpdate(
+            interview.candidate._id || interview.candidate,
+            { rawPayload: report },
+          );
+        }
+
+        await ProctoredInterview.findByIdAndUpdate(interview._id, {
+          $set: updateFields,
+        });
+
+        // Re-query with projections so the response stays lean
+        interview = await ProctoredInterview.findById(interview._id)
+          .select(STATUS_EXCLUDED_FIELDS)
+          .populate("opening", OPENING_PROJECTION)
+          .populate("candidate", CANDIDATE_PROJECTION);
+      }
+    } catch (err) {
+      console.warn(
+        "Could not re-fetch evaluation from Zinterview:",
+        err.message,
+      );
+      // Non-fatal — return whatever we have in the DB
+    }
+  }
+
+  // Include evaluationPending flag so frontend knows whether to keep polling
+  const evaluationPending =
+    interview.status === "COMPLETED" && !interview.evaluation;
+  res.json({ interview, evaluationPending });
 });
 
 /**
@@ -400,8 +486,8 @@ const findOrCreateOpening = asyncHandler(async (req, res) => {
       errorCorrection: false,
       emailWriting: false,
       // Question configuration
-      // maxQuestions: 12,
-      maxQuestions: 5, //For local
+      maxQuestions: 12,
+      // maxQuestions: 5, //For local
       mixOfBothQuestions: true,
       languageOfQuestions: "en",
       languageOfAnswers: "en",
@@ -467,8 +553,8 @@ const findOrCreateOpening = asyncHandler(async (req, res) => {
       openingData.jobRequirementsAndResponsibilities || [],
     interviewGuidelines: openingData.interviewGuidelines || "",
     // Interview configuration
-    // maxQuestions: openingData.maxQuestions || 12,
-    maxQuestions: openingData.maxQuestions || 5, //For local
+    maxQuestions: openingData.maxQuestions || 12,
+    // maxQuestions: openingData.maxQuestions || 5, //For local
     proctoring: openingData.proctoring ?? true,
     isCodeEditorRequired: openingData.isCodeEditorRequired ?? false,
     avatarMode: openingData.avatarMode ?? true,
@@ -1332,46 +1418,91 @@ const resumeInterview = asyncHandler(async (req, res) => {
  * Polls Zinterview to see if the interview is complete.
  */
 const checkCompletion = asyncHandler(async (req, res) => {
-  const interview = await ProctoredInterview.findOne({
+  // Look for IN_PROGRESS interviews, or COMPLETED ones with missing evaluation
+  let interview = await ProctoredInterview.findOne({
     user: req.user._id,
-    status: "IN_PROGRESS",
-  });
+    status: { $in: ["IN_PROGRESS", "COMPLETED"] },
+  }).sort({ createdAt: -1 });
 
   if (!interview) {
     return res.json({ completed: false });
   }
 
-  try {
-    const candidatesResponse = await ZinterviewService.getCandidates(
-      interview.zinterviewOpeningId,
-    );
-    const candidates =
-      candidatesResponse?.interviewReportsData || candidatesResponse || [];
+  // If already COMPLETED but evaluation is empty, re-poll for evaluation
+  if (interview.status === "COMPLETED" && !interview.evaluation) {
+    try {
+      const apiResponse = await ZinterviewService.getCandidate(
+        interview.zinterviewReportId,
+      );
+      const report = apiResponse?.report || apiResponse;
 
-    const candidate = Array.isArray(candidates)
-      ? candidates.find(
-          (c) =>
-            (c._id?.$oid || c._id || String(c._id)) ===
-            interview.zinterviewCandidateId,
-        )
-      : null;
+      if (report?.evaluation) {
+        interview.evaluation = report.evaluation;
+        interview.performanceScore =
+          extractPerformanceScore(report.evaluation) || 0;
+        interview.communicationEvaluation =
+          report.communicationEvaluation || "";
+        interview.trustScore = report.trustScore || 0;
+        interview.rawReportPayload = report;
+        await interview.save();
 
-    if (candidate?.interviewCompleted) {
-      interview.interviewCompleted = true;
-      interview.status = "COMPLETED";
-      interview.evaluation = candidate.evaluation || "";
-      interview.performanceScore =
-        extractPerformanceScore(candidate.evaluation) || 0;
-      interview.communicationEvaluation =
-        candidate.communicationEvaluation || "";
-      interview.trustScore = candidate.trustScore || 0;
-      interview.rawReportPayload = candidate;
-      await interview.save();
-
-      return res.json({ completed: true, interview });
+        return res.json({
+          completed: true,
+          interview,
+          evaluationPending: false,
+        });
+      }
+    } catch (err) {
+      console.warn(
+        "Evaluation re-fetch failed during completion check:",
+        err.message,
+      );
     }
-  } catch (err) {
-    console.warn("Completion check failed:", err.message);
+
+    // Still completed but evaluation not ready yet
+    return res.json({
+      completed: true,
+      interview,
+      evaluationPending: true,
+    });
+  }
+
+  // Interview is IN_PROGRESS — check if it has completed on Zinterview's side
+  if (interview.status === "IN_PROGRESS") {
+    try {
+      const candidatesResponse = await ZinterviewService.getCandidates(
+        interview.zinterviewOpeningId,
+      );
+      const candidates =
+        candidatesResponse?.interviewReportsData || candidatesResponse || [];
+
+      const candidate = Array.isArray(candidates)
+        ? candidates.find(
+            (c) =>
+              (c._id?.$oid || c._id || String(c._id)) ===
+              interview.zinterviewCandidateId,
+          )
+        : null;
+
+      if (candidate?.interviewCompleted) {
+        interview.interviewCompleted = true;
+        interview.status = "COMPLETED";
+        interview.evaluation = candidate.evaluation || "";
+        interview.performanceScore =
+          extractPerformanceScore(candidate.evaluation) || 0;
+        interview.communicationEvaluation =
+          candidate.communicationEvaluation || "";
+        interview.trustScore = candidate.trustScore || 0;
+        interview.rawReportPayload = candidate;
+        interview.reportFetched = true;
+        await interview.save();
+
+        const evaluationPending = !interview.evaluation;
+        return res.json({ completed: true, interview, evaluationPending });
+      }
+    } catch (err) {
+      console.warn("Completion check failed:", err.message);
+    }
   }
 
   res.json({ completed: false });
