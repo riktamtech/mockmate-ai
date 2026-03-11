@@ -653,6 +653,7 @@ const createCandidate = asyncHandler(async (req, res) => {
     lastName,
     email,
     preferredName: `${firstName} ${lastName}`,
+    correctionFormShown: true,
   };
   if (phoneNumber) candidateFields.phoneNumber = phoneNumber;
   if (experience !== undefined) candidateFields.experience = experience;
@@ -1969,7 +1970,9 @@ const adminGetResumeUrl = asyncHandler(async (req, res) => {
  */
 const adminGetRecordingUrls = asyncHandler(async (req, res) => {
   const interview = await ProctoredInterview.findById(req.params.id)
-    .select("rawReportPayload.botRecordingUrl rawReportPayload.concatenationId rawReportPayload.organizationName rawReportPayload.recordingDuration rawReportPayload._id")
+    .select(
+      "rawReportPayload.botRecordingUrl rawReportPayload.concatenationId rawReportPayload.organizationName rawReportPayload.recordingDuration rawReportPayload._id",
+    )
     .lean();
 
   if (!interview) {
@@ -1983,7 +1986,9 @@ const adminGetRecordingUrls = asyncHandler(async (req, res) => {
   const recordingDuration = report.recordingDuration || "";
   const orgName = report.organizationName || "";
   // The Zinterview report _id (not the ProctoredInterview _id)
-  const reportId = report._id ? (report._id.$oid || report._id.toString?.() || report._id) : "";
+  const reportId = report._id
+    ? report._id.$oid || report._id.toString?.() || report._id
+    : "";
 
   const organizationId =
     process.env.NODE_ENV === "production"
@@ -2018,7 +2023,9 @@ const adminGetRecordingUrls = asyncHandler(async (req, res) => {
 
   // Determine S3 config based on environment
   const isProduction = process.env.NODE_ENV === "production";
-  const s3Bucket = isProduction ? "zinterview-bot-singapore-s3" : "zinterview-bot-s3";
+  const s3Bucket = isProduction
+    ? "zinterview-bot-singapore-s3"
+    : "zinterview-bot-s3";
   const s3Region = isProduction ? "ap-southeast-1" : "us-east-1";
 
   let chimeUrl = "";
