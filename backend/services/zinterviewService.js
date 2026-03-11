@@ -117,10 +117,7 @@ const ZinterviewService = {
     ),
 
   /** Fetch all openings for the configured organisation. */
-  getOpenings: () =>
-    withRetry(() =>
-      createClient().get(`openings`),
-    ),
+  getOpenings: () => withRetry(() => createClient().get(`openings`)),
 
   /** Update an existing opening by ID. */
   updateOpening: (openingId, payload) =>
@@ -224,6 +221,21 @@ const ZinterviewService = {
   /** Resume an interrupted interview (generates a new resumeToken). */
   resumeInterview: (payload) =>
     withRetry(() => createClient().post("candidates/resumeInterview", payload)),
+
+  /** Reset active session for a candidate */
+  resetActiveSession: (interviewReportId, openingTitle, orgName) =>
+    withRetry(() =>
+      createClient().post("candidates/updateActiveSession", {
+        activeSession: "false",
+        interviewReportId,
+        openingTitle: openingTitle || "noOpeningTitle",
+        orgName: orgName || "noOrgName",
+        proctorLink: `${getInterviewHost()}/admin/proctor/${interviewReportId}`,
+        emailRecipients: [],
+        isMobile: false,
+        osName: "Mac OS",
+      }),
+    ),
 
   // ─── Utilities ───────────────────────────────────────────────────────
 

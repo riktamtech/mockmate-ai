@@ -16,6 +16,7 @@ const {
   markInProgress,
   checkCompletion,
   resumeInterview,
+  resetSession,
   adminGetAll,
   adminGetDetail,
   adminGetResumeUrl,
@@ -39,6 +40,7 @@ router.post("/start-over", protect, startOver);
 router.post("/mark-in-progress", protect, markInProgress);
 router.post("/check-completion", protect, checkCompletion);
 router.post("/resume-interview", protect, resumeInterview);
+router.post("/reset-session", protect, resetSession);
 
 // ── Admin routes ─────────────────────────────────────────────────────────
 

@@ -547,6 +547,13 @@ export const api = {
     return data;
   },
 
+  resetProctoredSession: async () => {
+    const { data } = await axiosInstance.post(
+      "/api/proctored/reset-session",
+    );
+    return data;
+  },
+
   getAdminProctoredInterviews: async (
     page = 1,
     limit = 10,

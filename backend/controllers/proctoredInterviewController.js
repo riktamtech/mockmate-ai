@@ -1415,6 +1415,38 @@ const resumeInterview = asyncHandler(async (req, res) => {
 });
 
 /**
+ * POST /api/proctored/reset-session
+ * Resets the active session flag in Zinterview.
+ */
+const resetSession = asyncHandler(async (req, res) => {
+  const interview = await ProctoredInterview.findOne({
+    user: req.user._id,
+    status: { $in: ["IN_PROGRESS", "SCHEDULED", "COMPLETED"] },
+  }).populate("opening");
+
+  if (!interview || !interview.zinterviewReportId) {
+    res.status(400);
+    throw new Error("No active interview found to reset session");
+  }
+
+  // Use Zinterview API to reset the session
+  const orgName = "MockMate";
+  const title = interview.opening?.title || "Interview";
+  
+  try {
+    const result = await ZinterviewService.resetActiveSession(
+      interview.zinterviewReportId,
+      title,
+      orgName
+    );
+    res.json({ message: "Session reset successfully", result });
+  } catch (err) {
+    res.status(500);
+    throw new Error(err.message || "Failed to reset session");
+  }
+});
+
+/**
  * POST /api/proctored/check-completion
  * Polls Zinterview to see if the interview is complete.
  */
@@ -2082,6 +2114,7 @@ module.exports = {
   markInProgress,
   checkCompletion,
   resumeInterview,
+  resetSession,
   adminGetAll,
   adminGetDetail,
   adminGetResumeUrl,

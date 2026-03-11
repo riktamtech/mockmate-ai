@@ -285,6 +285,21 @@ export function useProctoredInterview() {
     [],
   );
 
+  // ── Reset active session ────────────────────────────────────────────────
+  const resetActiveSessionAction = useCallback(async () => {
+    try {
+      setActionLoading(true);
+      setError(null);
+      const result = await api.resetProctoredSession();
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  }, []);
+
   // ── Derived state ───────────────────────────────────────────────────
   const isCompleted = useMemo(
     () => proctoredInterview?.status === "COMPLETED",
@@ -376,6 +391,7 @@ export function useProctoredInterview() {
     startPolling,
     stopPolling,
     resumeInterviewAction,
+    resetActiveSessionAction,
     refreshEvaluation,
     setError,
   };

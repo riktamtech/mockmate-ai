@@ -365,6 +365,7 @@ export const ProctoredChatInterface = () => {
     stopPolling,
     rescheduleInterview,
     resumeInterviewAction,
+    resetActiveSessionAction,
     refreshEvaluation,
     setError,
   } = useProctoredInterview();
@@ -389,6 +390,7 @@ export const ProctoredChatInterface = () => {
     DEFAULT_ROLE_SUGGESTIONS,
   );
   const [loadingRoleSuggestions, setLoadingRoleSuggestions] = useState(false);
+  const [isOpeningInterview, setIsOpeningInterview] = useState(false);
   const fetchedRolesForUserId = useRef(null);
 
   // Reset role suggestions ref on logout so they re-fetch on re-login
@@ -830,13 +832,15 @@ export const ProctoredChatInterface = () => {
   const handleJoinInterview = useCallback(async () => {
     let url = interview?.interviewUrl;
     if (!url) return;
-    
-    // Append source=mockmate to the URL
-    url = url.includes("?") ? `${url}&source=mockmate` : `${url}?source=mockmate`;
 
+    // Append source=mockmate to the URL
+    url = url.includes("?")
+      ? `${url}&source=mockmate`
+      : `${url}?source=mockmate`;
+
+    setIsOpeningInterview(true);
     try {
-      // Open the tab FIRST, synchronously — browsers block window.open
-      // after any async gap (await). Do this before markInProgress().
+      await resetActiveSessionAction().catch(() => {});
       window.open(url, "_blank", "noopener,noreferrer");
 
       // Mark that the user has opened the interview tab
@@ -850,19 +854,32 @@ export const ProctoredChatInterface = () => {
       startPolling();
     } catch (err) {
       addBot("❌ Failed to mark interview as in progress. Please try again.");
+    } finally {
+      setIsOpeningInterview(false);
     }
-  }, [interview, markInProgress, startPolling, addBot]);
+  }, [
+    interview,
+    resetActiveSessionAction,
+    markInProgress,
+    startPolling,
+    addBot,
+  ]);
 
   // ── Reopen interview tab ────────────────────────────────────────────
-  const handleReopenInterview = useCallback(() => {
+  const handleReopenInterview = useCallback(async () => {
     let url = interview?.interviewUrl;
     if (!url) return;
 
     // Append source=mockmate to the URL
-    url = url.includes("?") ? `${url}&source=mockmate` : `${url}?source=mockmate`;
+    url = url.includes("?")
+      ? `${url}&source=mockmate`
+      : `${url}?source=mockmate`;
 
+    setIsOpeningInterview(true);
+    await resetActiveSessionAction().catch(() => {});
     window.open(url, "_blank", "noopener,noreferrer");
-  }, [interview]);
+    setIsOpeningInterview(false);
+  }, [interview, resetActiveSessionAction]);
 
   // ── Watch for completion ────────────────────────────────────────────
   useEffect(() => {
@@ -1426,7 +1443,9 @@ export const ProctoredChatInterface = () => {
                   </div>
                   <div className="text-center">
                     <p className="font-semibold text-slate-900">Start Now</p>
-                    <p className="text-xs text-slate-500">Begin in a minute</p>
+                    <p className="text-xs text-slate-500">
+                      Begin in less than a minute
+                    </p>
                   </div>
                 </button>
 
@@ -1543,11 +1562,24 @@ export const ProctoredChatInterface = () => {
                     </div>
                     <button
                       onClick={handleJoinInterview}
+                      disabled={isOpeningInterview}
                       className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-xl
-                        hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg text-lg animate-glow-ring"
+                        hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg text-lg animate-glow-ring disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                      <ExternalLink size={20} /> Join Interview Now
-                      <ArrowRight size={18} className="animate-bounce-arrow" />
+                      {isOpeningInterview ? (
+                        <>
+                          <Loader2 size={20} className="animate-spin" /> Opening
+                          interview...
+                        </>
+                      ) : (
+                        <>
+                          <ExternalLink size={20} /> Join Interview Now
+                          <ArrowRight
+                            size={18}
+                            className="animate-bounce-arrow"
+                          />
+                        </>
+                      )}
                     </button>
                     <div className="flex items-center gap-1.5 text-xs text-green-600 text-center font-medium">
                       <MousePointerClick size={14} className="animate-pulse" />
@@ -1572,10 +1604,20 @@ export const ProctoredChatInterface = () => {
                         {/* Reopen Interview */}
                         <button
                           onClick={handleReopenInterview}
+                          disabled={isOpeningInterview}
                           className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-blue-200 text-blue-700 font-medium rounded-xl
-                          hover:border-blue-400 hover:bg-blue-50 transition-all shadow-sm"
+                          hover:border-blue-400 hover:bg-blue-50 transition-all shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                          <RefreshCw size={16} /> Reopen Interview Tab
+                          {isOpeningInterview ? (
+                            <>
+                              <Loader2 size={16} className="animate-spin" />{" "}
+                              Opening interview...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw size={16} /> Reopen Interview Tab
+                            </>
+                          )}
                         </button>
 
                         {/* Resume Interview */}
@@ -1583,9 +1625,9 @@ export const ProctoredChatInterface = () => {
                           onClick={handleResumeInterview}
                           className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium rounded-xl
                           hover:from-emerald-700 hover:to-teal-700 transition-all shadow-md"
-                          disabled={actionLoading}
+                          disabled={actionLoading || isOpeningInterview}
                         >
-                          {actionLoading ? (
+                          {actionLoading && !isOpeningInterview ? (
                             <Loader2 size={16} className="animate-spin" />
                           ) : (
                             <PlayCircle size={16} />
@@ -1617,10 +1659,20 @@ export const ProctoredChatInterface = () => {
                     <div className="space-y-3">
                       <button
                         onClick={handleJoinInterview}
+                        disabled={isOpeningInterview}
                         className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl
-                        hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg animate-pulse-glow text-lg"
+                        hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg animate-pulse-glow text-lg disabled:opacity-70 disabled:cursor-not-allowed"
                       >
-                        <ExternalLink size={20} /> Start Interview Now
+                        {isOpeningInterview ? (
+                          <>
+                            <Loader2 size={20} className="animate-spin" />{" "}
+                            Opening interview...
+                          </>
+                        ) : (
+                          <>
+                            <ExternalLink size={20} /> Start Interview Now
+                          </>
+                        )}
                       </button>
 
                       {/* Start anytime note for schedule-later */}
@@ -1781,21 +1833,37 @@ export const ProctoredChatInterface = () => {
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-3">
                 {interviewUrl && (
-                  <a
-                    href={interviewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-blue-200 rounded-xl text-sm text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm"
+                  // <a
+                  //   href={interviewUrl}
+                  //   target="_blank"
+                  //   rel="noopener noreferrer"
+                  //   className="flex items-center gap-2 px-4 py-2.5 bg-white border border-blue-200 rounded-xl text-sm text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm"
+                  // >
+                  //   <RefreshCw size={15} /> Reopen interview tab
+                  // </a>
+                  <button
+                    onClick={handleReopenInterview}
+                    disabled={isOpeningInterview}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-blue-200 rounded-xl text-sm text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    <RefreshCw size={15} /> Reopen interview tab
-                  </a>
+                    {isOpeningInterview ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin" /> Opening
+                        interview...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw size={15} /> Reopen Interview Tab
+                      </>
+                    )}
+                  </button>
                 )}
                 <button
                   onClick={handleResumeInterview}
                   className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-sm font-medium hover:from-emerald-700 hover:to-teal-700 transition-all shadow-md"
-                  disabled={actionLoading}
+                  disabled={actionLoading || isOpeningInterview}
                 >
-                  {actionLoading ? (
+                  {actionLoading && !isOpeningInterview ? (
                     <Loader2 size={15} className="animate-spin" />
                   ) : (
                     <PlayCircle size={15} />
@@ -1963,9 +2031,7 @@ export const ProctoredChatInterface = () => {
 
                   <Button
                     onClick={() =>
-                      navigate(
-                        "/mockmate/candidate/proctored-interview/report",
-                      )
+                      navigate("/mockmate/candidate/proctored-interview/report")
                     }
                     className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
                   >
