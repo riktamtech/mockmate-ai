@@ -78,9 +78,13 @@ const LandingPage = () => {
 
 const ProtectedCandidateRoute = ({ children }) => {
   const user = useAppStore((s) => s.user);
-  const token = localStorage.getItem("token");
+  const authLoading = useAppStore((s) => s.authLoading);
 
-  if (!user && !token) {
+  if (authLoading) {
+    return <LazyFallback />;
+  }
+
+  if (!user) {
     return <Navigate to="/mockmate/login" replace />;
   }
   return <>{children}</>;
@@ -88,9 +92,13 @@ const ProtectedCandidateRoute = ({ children }) => {
 
 const ProtectedAdminRoute = ({ children }) => {
   const user = useAppStore((s) => s.user);
-  const token = localStorage.getItem("token");
+  const authLoading = useAppStore((s) => s.authLoading);
 
-  if (!user && !token) {
+  if (authLoading) {
+    return <LazyFallback />;
+  }
+
+  if (!user) {
     return <Navigate to="/mockmate/login" replace />;
   }
 
@@ -156,32 +164,44 @@ const DashboardWrapper = () => {
 };
 
 export default function App() {
-  const { setUser } = useAppStore();
+  const { setUser, setAuthLoading } = useAppStore();
   // Verify auth token on initial load
   const initialMeFetchDone = useRef(false);
 
   useEffect(() => {
+    // If we have already initiated the fetch, do nothing to avoid interfering
+    if (initialMeFetchDone.current) return;
+
     const token = localStorage.getItem("token");
-    if (token && !initialMeFetchDone.current) {
-      initialMeFetchDone.current = true;
-      if (!useAppStore.getState().user) {
-        api
-          .getMe()
-          .then((user) => {
-            setUser(user);
-            if (user.email !== "harshith@riktamtech.com") {
-              LogRocket.identify(user._id, {
-                name: user.name,
-                email: user.email,
-                isAdmin: user.isAdmin,
-              });
-            }
-          })
-          .catch(() => {
-            localStorage.removeItem("token");
-            setUser(null);
-          });
-      }
+    if (!token) {
+      setAuthLoading(false);
+      return;
+    }
+
+    initialMeFetchDone.current = true;
+
+    if (!useAppStore.getState().user) {
+      api
+        .getMe()
+        .then((user) => {
+          setUser(user);
+          if (user.email !== "harshith@riktamtech.com") {
+            LogRocket.identify(user._id, {
+              name: user.name,
+              email: user.email,
+              isAdmin: user.isAdmin,
+            });
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem("token");
+          setUser(null);
+        })
+        .finally(() => {
+          setAuthLoading(false);
+        });
+    } else {
+      setAuthLoading(false);
     }
   }, []);
 

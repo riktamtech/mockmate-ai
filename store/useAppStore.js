@@ -5,6 +5,9 @@ export const useAppStore = create((set) => ({
   user: null,
   setUser: (user) => set({ user }),
 
+  authLoading: true,
+  setAuthLoading: (authLoading) => set({ authLoading }),
+
   appState: AppState.LANDING,
   setAppState: (appState) => set({ appState }),
 

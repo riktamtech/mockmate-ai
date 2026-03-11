@@ -136,7 +136,7 @@ export const Dashboard = ({
             </div>
             <Button
               onClick={onStartNew}
-              className="bg-blue-30 text-blue-50 hover:bg-blue-50 shadow-lg"
+              className="bg-blue-30 text-blue-50 hover:bg-white hover:text-blue-600 shadow-lg transition-colors border-none"
             >
               <Plus size={20} className="mr-2" /> Start New Interview
             </Button>
