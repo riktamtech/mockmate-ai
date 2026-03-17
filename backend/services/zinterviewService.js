@@ -32,7 +32,7 @@ const getOrganizationId = () =>
 
 const getInterviewHost = () =>
   isProduction()
-    ? process.env.ZINTERVIEW_INTERVIEW_HOST_PROD || "https://app.zinterview.ai"
+    ? process.env.ZINTERVIEW_INTERVIEW_HOST_PROD || "https://interview.zinterview.ai"
     : process.env.ZINTERVIEW_INTERVIEW_HOST_LOCAL || "http://localhost:4200"; //3000 for old ui. Change according to your Local url
 
 // ── Retry wrapper ────────────────────────────────────────────────────────

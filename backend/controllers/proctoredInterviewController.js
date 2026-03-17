@@ -1403,7 +1403,7 @@ const resumeInterview = asyncHandler(async (req, res) => {
   const host =
     process.env.NODE_ENV === "production"
       ? process.env.ZINTERVIEW_INTERVIEW_HOST_PROD ||
-        "https://app.zinterview.ai"
+        "https://interview.zinterview.ai"
       : process.env.ZINTERVIEW_INTERVIEW_HOST_LOCAL || "http://localhost:4200";
   const resumeUrl = `${host}/interview/${interview.zinterviewOpeningId}/start/${interview.zinterviewReportId}/${resumeToken}`;
 
