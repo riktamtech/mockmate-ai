@@ -42,6 +42,18 @@ const ProctoredReport = React.lazy(() =>
 const AdminProctoredReport = React.lazy(
   () => import("./components/Admin/AdminProctoredReport"),
 );
+const JobOpeningsPage = React.lazy(
+  () => import("./components/jobs/JobOpeningsPage"),
+);
+const EventsPage = React.lazy(
+  () => import("./components/events/EventsPage"),
+);
+const JobAnalyticsPage = React.lazy(
+  () => import("./components/analytics/JobAnalyticsPage"),
+);
+const NotificationsPage = React.lazy(
+  () => import("./components/notifications/NotificationsPage"),
+);
 
 const LazyFallback = () => (
   <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -159,6 +171,22 @@ const DashboardWrapper = () => {
         onMenuClick={() => setIsDrawerOpen(true)}
         onSelectMode={handleSelectMode}
       />
+    </div>
+  );
+};
+
+/**
+ * PageWithDrawer — Reusable dark-bg wrapper with SideDrawer + MenuButton.
+ * Used for jobs, events, analytics, notifications pages.
+ */
+const PageWithDrawer = ({ children }) => {
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+
+  return (
+    <div className="relative min-h-screen" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}>
+      <SideDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
+      <MenuButton onClick={() => setIsDrawerOpen(true)} />
+      {children}
     </div>
   );
 };
@@ -310,6 +338,62 @@ export default function App() {
             <ProtectedCandidateRoute>
               <Suspense fallback={<LazyFallback />}>
                 <ProctoredReport />
+              </Suspense>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        {/* Job Openings Route */}
+        <Route
+          path="/mockmate/candidate/jobs"
+          element={
+            <ProtectedCandidateRoute>
+              <Suspense fallback={<LazyFallback />}>
+                <PageWithDrawer>
+                  <JobOpeningsPage />
+                </PageWithDrawer>
+              </Suspense>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        {/* Events Route */}
+        <Route
+          path="/mockmate/candidate/events"
+          element={
+            <ProtectedCandidateRoute>
+              <Suspense fallback={<LazyFallback />}>
+                <PageWithDrawer>
+                  <EventsPage />
+                </PageWithDrawer>
+              </Suspense>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        {/* Analytics Route */}
+        <Route
+          path="/mockmate/candidate/analytics"
+          element={
+            <ProtectedCandidateRoute>
+              <Suspense fallback={<LazyFallback />}>
+                <PageWithDrawer>
+                  <JobAnalyticsPage />
+                </PageWithDrawer>
+              </Suspense>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        {/* Notifications Route */}
+        <Route
+          path="/mockmate/candidate/notifications"
+          element={
+            <ProtectedCandidateRoute>
+              <Suspense fallback={<LazyFallback />}>
+                <PageWithDrawer>
+                  <NotificationsPage />
+                </PageWithDrawer>
               </Suspense>
             </ProtectedCandidateRoute>
           }

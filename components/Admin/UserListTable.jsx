@@ -4,6 +4,7 @@ import {
   X,
   FileText,
   Eye,
+  BarChart3,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -21,6 +22,7 @@ const UserListTable = ({
   visiblePageStart,
   setVisiblePageStart,
   handleUserView,
+  handleJobAnalytics,
 }) => {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -137,12 +139,22 @@ const UserListTable = ({
                     )}
                   </td>
                   <td className="p-4 text-right">
-                    <button
-                      onClick={() => handleUserView(user._id)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-xs font-medium ml-auto"
-                    >
-                      <Eye size={14} /> View History
-                    </button>
+                    <div className="flex items-center gap-2 justify-end">
+                      <button
+                        onClick={() => handleUserView(user._id)}
+                        className="flex items-center gap-1 px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-xs font-medium"
+                      >
+                        <Eye size={14} /> View History
+                      </button>
+                      {user.applicationCount > 0 && handleJobAnalytics && (
+                        <button
+                          onClick={() => handleJobAnalytics(user._id)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors text-xs font-medium"
+                        >
+                          <BarChart3 size={14} /> Job Analytics
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

@@ -1,0 +1,479 @@
+# AGENT DIRECTIVE: Zinterview × Mockmate-AI Integration — Full-Stack Feature Build
+
+## CONTEXT
+
+You are operating across 4 production-deployed repositories:
+
+Zinterview-backend
+,
+
+Zinterview-frontend
+,
+
+mockmate-ai
+, and
+
+interview-ui
+. Every change must be production-safe, non-breaking, and architecturally consistent with each repo's existing patterns. Read and deeply understand existing code before writing anything.
+
+---
+
+## CORE MANDATE
+
+Build the complete **Zinterview Job Openings → Mockmate-AI Candidate Portal** integration end-to-end, across all 4 repositories. Every feature MUST be implemented behind **Feature Flags** (Progressive Feature Release pattern). All flags must be togglable via a single boolean switch with zero side effects.
+
+---
+
+## OBJECTIVES
+
+### [OBJ-1] ZINTERVIEW-FRONTEND: Recruiter Consent & Configuration UI
+
+**Trigger Point:** At the final step of opening creation OR immediately post-creation (choose highest attention-capture placement). Also retrofit all existing active openings.
+
+**Consent Flow UI:**
+
+- Show a high-attention consent popup/modal asking if the recruiter wants to post this opening to the Mockmate-AI candidate portal.
+- If consented, show a configuration step collecting:
+  - **Candidate eligibility:** Allow all candidates (default) OR require minimum resume fitness score (recruiter-configurable numeric threshold).
+  - **Approval gate:** Allow candidates directly (default) OR require recruiter approval before adding candidate to the opening.
+  - **Interview scheduling mode** (single-select):
+    - `TIMEFRAME` — Candidate selects time within a recruiter-defined window.
+    - `MANUAL` — Recruiter manually schedules.
+    - `IMMEDIATE` — Interview starts immediately upon application (if no approval gate).
+    - `ANYTIME` — Candidate can interview anytime post-application.
+- Recruiters must be able to **edit all config options at any time** per opening.
+- Recruiters must be able to **disable Mockmate posting** for any opening at any time instantly.
+
+**Nudge System (for non-consented openings):**
+
+- Show persistent, animated **banners, marketing copy, and nudge UI** on:
+  - Individual opening detail page.
+  - All openings list page.
+- Copy must convey: "Find verified talent," "Perfect-fit candidates," "AI-verified applicants," etc.
+- Nudges must include a CTA that opens the full consent + config flow inline.
+- Follow the same nudge/pitch quality as the existing Proctored Interview marketing in
+
+Zinterview-frontend
+.
+
+**Permissions:**
+
+- Only users with edit/action permissions on an opening may approve/decline Mockmate candidates.
+- View-only users must have all action controls disabled/hidden.
+
+**Mockmate Candidates Tab (in Opening Candidate View):**
+
+- If approval gate is enabled: show a dedicated tab in the candidates table for Mockmate applicants.
+- Show: candidate details, resume viewer, previous interview history, transcripts, recordings.
+- Action buttons: `Approve` / `Decline` (permission-gated).
+- On recruiter action → immediately update application lifecycle in Mockmate-AI via API + trigger in-app and email notification to candidate.
+
+**Feature Flag:** `FEATURE_MOCKMATE_PORTAL_CONSENT`
+
+---
+
+### [OBJ-2] ZINTERVIEW-BACKEND: API Exposure & Business Logic
+
+\*\*New APIs to expose via
+
+exposeApiRoute.js
+
+- controllers/services:\*\*
+
+* `GET /openings/public/active` — Fetch all active, non-`codingRound` openings (minimal fields: title, org, location, skills, postedDate, status, openingId) with server-side pagination + filters.
+* `GET /openings/public/:openingId` — Full opening detail for Mockmate display.
+* `POST /openings/:openingId/mockmate-consent` — Save/update Mockmate portal config for an opening.
+* `PUT /openings/:openingId/mockmate-config` — Edit config (fitness threshold, scheduling mode, approval gate).
+* `DELETE /openings/:openingId/mockmate-consent` — Disable Mockmate posting.
+* `POST /openings/:openingId/register-candidate` — Register a Mockmate candidate (replaces UserDetails.jsx flow at `https://app.zinterview.ai/interview/:openingId`). Returns `interviewReportId` for direct redirect.
+* `POST /openings/:openingId/validate-application` — Validate fitness score against opening config. Return `PASS`/`FAIL` with reason.
+* `POST /candidates/:candidateId/approve` / `decline` — Recruiter approval actions (permission-gated middleware).
+* `GET /candidates/:candidateId/history` — Interview history, transcripts, recordings for Mockmate applicant view.
+* Expose any additional APIs required for notification sync between systems.
+
+**Security:** Implement server-to-server auth between Zinterview-backend and Mockmate-AI using **signed JWT with shared secret + IP allowlist + request signing**. All cross-server calls must use this auth layer.
+
+**Resume Fitness Calculation:**
+
+- Reference existing implementation in
+
+Zinterview-backend
+.
+
+- Reuse or expose the same scoring logic for Mockmate validation at the backend layer.
+- Do NOT recalculate if a valid cached score is passed from Mockmate with the application payload (trust Mockmate score if within configurable TTL).
+
+**Feature Flag:** `FEATURE_MOCKMATE_API_EXPOSURE`
+
+---
+
+### [OBJ-3] MOCKMATE-AI: Data Sync & Database Schema
+
+**Migration:**
+
+- Migrate all active, non-`codingRound` openings from Zinterview into a new Mockmate-AI DB collection: `job_openings`.
+- Schema must include: all opening fields + `isEnabled` (boolean, default: `true`) + `source: 'zinterview'` + `orgId`, `syncedAt`, `mockmate_config` (fitness threshold, scheduling mode, approval gate).
+- **Sync mechanism:** When recruiter enables Mockmate posting → upsert record in `job_openings` immediately via API call. When recruiter disables → set `isEnabled: false` immediately.
+- No polling. Event-driven sync only.
+
+**Collections to Design:**
+
+- `job_openings` — as above.
+- `job_applications` — candidateId, openingId, status (enum: `PENDING_APPROVAL` | `APPROVED` | `REJECTED` | `INTERVIEW_SCHEDULED` | `INTERVIEW_IN_PROGRESS` | `INTERVIEW_COMPLETED` | `WITHDRAWN`), fitnessScore, resumeId, appliedAt, scheduledAt, interviewReportId, lifecycleHistory (array of stage+timestamp).
+- `candidate_resumes` — LRU cache of 5 most recent resumes per user: userId, resumes (array, max 5, ordered by recency), defaultResumeId.
+- `candidate_profiles` — Pre-fill data for job applications: userId, name, email, phone, linkedIn, portfolio, savedDetails (boolean flag for auto-fill consent).
+- `notifications` — userId, type, title, body, metadata (openingId, applicationId, etc.), isRead, createdAt, channel (IN_APP | EMAIL).
+- `job_analytics_snapshots` — userId, week, applicationsCount, shortlisted, rejected, interviewsPending, interviewsCompleted, avgFitnessScore, recruiterResponseRate, createdAt.
+
+**Feature Flag:** `FEATURE_MOCKMATE_DB_SYNC`
+
+---
+
+### [OBJ-4] MOCKMATE-AI: Active Job Openings Page & UI
+
+**Sidebar:** Add "Active Job Openings" entry to
+
+SideDrawer.jsx
+with icon, badge for new openings, and animated indicator.
+
+**Page Architecture:**
+
+- Route: `/jobs` (new page, proper file/folder structure under `pages/jobs/` or equivalent industry-standard path).
+- Use **React Virtualization** (`react-window` or `react-virtual`) for the job list.
+- **Infinite scroll** + server-side pagination.
+- **Global search bar** (debounced, 300ms): searches role, title, org, skills, keywords (comma-separated multi-keyword support).
+- **Filters (multi-select where applicable):** experience level, location, organisation, applied, saved, needs interview, interview in progress, interview completed.
+- Sort: newest first (default).
+- Fetch only `isEnabled: true` + non-`codingRound` openings from `job_openings` collection.
+
+**Job Card Design (collapsed/preview):**
+
+- Show: Job Title, Organisation, Location, Expected Skills (ellipsis overflow), Posted Date, Status badge ("Actively Hiring" / "Closing Soon"), **"Zinterview Verified Hiring" badge** (animated, visually prominent), Apply/View CTA.
+- Cards must be animated (entrance, hover, interaction states).
+- Cards must be beautiful, attention-grabbing, production-grade. Not generic.
+
+**Job Detail View (expanded/drawer/modal or dedicated page):**
+
+- Full job description, all opening fields, org details.
+- Lifecycle status for this candidate's application (if applied).
+- "Zinterview Verified" badge prominent.
+- Apply button: glowing, animated, state-aware.
+
+**Nudge System:**
+
+- Implement banners, animated nudge cards, and marketing copy matching the quality of the existing Proctored Interview pitch in
+
+mockmate-ai
+.
+
+- Nudge users daily with newly posted openings (until they apply or dismiss for that opening).
+- Nudge copy: urgency, relevance, "verified hiring," "AI-matched," etc.
+
+**Feature Flag:** `FEATURE_JOB_OPENINGS_PAGE`
+
+---
+
+### [OBJ-5] MOCKMATE-AI: Application Flow
+
+**Pre-Application Gate (Feature Flagged):**
+
+- Flag: `FEATURE_REQUIRE_PROCTORED_INTERVIEW_BEFORE_APPLY` (default: `true`).
+- If `true`: Candidate must have a completed proctored interview. If not, show state-aware UI with CTA redirecting to proctored interview page.
+- If `false`: Skip gate entirely.
+
+**Apply Button States:**
+
+- `PROCTORED_REQUIRED` → redirect CTA.
+- `NOT_APPLIED` → glowing Apply button.
+- `APPLIED` → status badge + lifecycle tracker.
+- `CLOSED` → disabled, "Opening no longer active" message.
+
+**Application Form (on Apply click):**
+
+- Pre-filled from `candidate_profiles` collection.
+- Fields mirror
+
+UserDetails.jsx
+from Zinterview.
+
+- Resume picker: show LRU cache of last 5 resumes + upload new option.
+- Beautiful, animated form UI. Not generic.
+- **First-time apply modal:** Ask user to confirm using these details for future applications (sets `savedDetails: true`). If `savedDetails: true` on subsequent applies → skip form, apply directly with saved data (with a quick confirmation toast).
+- Global profile edit option accessible from profile/settings.
+
+**Resume Fitness Score Flow:**
+
+- On form submit → immediately call Mockmate backend to calculate fitness score via Gemini LLM.
+- **Prompt:** Industry-standard, high-accuracy resume-to-JD fitness scoring. Parameters: skills match (weight 35%), experience relevance (20%), education fit (10%), role alignment (20%), keyword density (15%). Output: score 0–100, breakdown by parameter, recommendation label (`STRONG_MATCH` | `GOOD_MATCH` | `FAIR_MATCH` | `LOW_MATCH`).
+- **Caching:** Implement semantic caching using `GPTCache` (or equivalent Javascript library). Cache key: semantic embedding of (resumeText + jobDescription). Cache hit threshold: ≥92% cosine similarity. TTL: 7 days. Store in Redis or equivalent.
+- **Loading state UI:** Full-screen or overlay stunning animated loading state. Copy: "Analyzing your profile against this role..." / "Calculating your match score..." — make it cinematic, keep user engaged.
+- **Score result UI:** Animated, dynamic score display. Gauge/ring/progress animation. Color-coded by level. Per-parameter breakdown. Contextual recommendation copy:
+  - `STRONG_MATCH (80–100)`: "Excellent fit! Apply with confidence."
+  - `GOOD_MATCH (60–79)`: "Good match. Consider highlighting X skills."
+  - `FAIR_MATCH (40–59)`: "Moderate fit. Upskilling in Y recommended."
+  - `LOW_MATCH (0–39)`: "Below average fit. Consider improving your resume before applying."
+- User can proceed to apply regardless of score.
+
+**Backend Validation (on application submit):**
+
+- Send fitnessScore + resumeId + candidateId to
+
+Zinterview-backend
+`POST /openings/:openingId/validate-application`.
+
+- If fitness threshold not met → show rejection UI: "This organisation requires a higher match score. Work on upskilling and try again."
+- If passed:
+  - **`APPROVAL_REQUIRED`:** Show success popup. "Application submitted. Await HR review."
+  - **`MANUAL_SCHEDULE`:** Show success popup. "Application submitted. HR will reach out to schedule your interview."
+  - **`TIMEFRAME`:** Show calendar/time-slot picker (same UX quality as
+
+ProctoredChatInterface.jsx
+scheduling). Schedule and confirm.
+
+- **`IMMEDIATE`:** Before apply CTA, warn: "This role requires an immediate interview upon applying. Are you ready?" → On confirm → apply + open interview link immediately.
+- **`ANYTIME`:** Show "Proceed to Interview" button with interview link. Candidate can start whenever.
+
+**Candidate Registration:**
+
+- Call `POST /openings/:openingId/register-candidate` on Zinterview-backend with form data.
+- Receive `interviewReportId` → construct interview URL: `https://interview.zinterview.ai/interview/:interviewReportId`.
+- Open this URL directly (new tab or redirect) based on scheduling mode.
+
+**Feature Flags:** `FEATURE_REQUIRE_PROCTORED_INTERVIEW_BEFORE_APPLY`, `FEATURE_JOB_APPLICATION_FLOW`
+
+---
+
+### [OBJ-6] MOCKMATE-AI: Application Lifecycle & Status Tracking
+
+- After each application, display a **visual lifecycle tracker** on the job card and detail view.
+- Stages: Applied → Fitness Evaluated → Under Review (if approval gate) → Approved/Rejected → Interview Scheduled → Interview In Progress → Interview Completed.
+- Animated step-by-step progress indicator. Beautiful, not generic.
+- Statuses must sync from Zinterview-backend events via API calls / webhooks.
+- On opening close: mark application with "Opening Closed" state.
+
+**Feature Flag:** `FEATURE_APPLICATION_LIFECYCLE`
+
+---
+
+### [OBJ-7] MOCKMATE-AI: Notification System
+
+**In-App Notifications:**
+
+- Bell icon in header with unread count badge (animated).
+- Notification panel: show 10–15 most recent on open. Infinite scroll / "Load More" for remaining. "View All" → dedicated `/notifications` page with infinite scroll + react-window virtualization.
+- Notification schema: `notifications` collection (see OBJ-3).
+- Trigger notifications on: application status change, recruiter approval/decline, interview scheduled, interview reminder, new matching job posted.
+- UI: animated, visually rich, categorized by type, time-relative timestamps, read/unread states with visual distinction.
+
+**Email Notifications:**
+
+- Send email from Mockmate-AI on: application received, approval/rejection, interview scheduled, interview reminder (if candidate hasn't checked in-app notification within configurable time window).
+- Build structured, attractive email templates per notification type.
+- Use existing email infrastructure in
+
+mockmate-ai
+or implement via nodemailer/sendgrid matching existing patterns.
+
+**Feature Flag:** `FEATURE_NOTIFICATION_SYSTEM`
+
+---
+
+### [OBJ-8] MOCKMATE-AI: Upcoming Events Section
+
+- New section (accessible from Sidebar or dashboard): `/events`.
+- **Upcoming tab:** All upcoming scheduled interviews + pending actions (interview pending, approval pending, etc.).
+- **Past tab:** Completed interviews, past events, historical actions.
+- Each event card: opening title, org, interview date/time, status, CTA (join interview, view report, etc.).
+- Animated, beautiful, production-grade UI.
+
+**Feature Flag:** `FEATURE_UPCOMING_EVENTS`
+
+---
+
+### [OBJ-9] MOCKMATE-AI: Job Analytics Dashboard
+
+**Route:** `/job-analytics` (accessible from Sidebar + Job Openings page + relevant CTAs).
+
+**Metrics to display:**
+
+- Total applications, shortlisted, rejected, interviews pending, interviews completed.
+- Average resume fitness score across applications.
+- Recruiter response rate (applications that received any recruiter action / total).
+- Weekly application activity graph (line/bar chart).
+- Application status distribution (donut/pie chart).
+- Match score distribution histogram.
+- Growth graph (cumulative applications over time).
+- Per-application timeline breakdown.
+
+**Admin View:**
+
+- In
+
+UserListTable.jsx
+Actions column: add "Job Analytics" option per user (hide if user has 0 applications).
+
+- Admin can view any user's analytics page.
+- Admin dashboard: aggregate stats across all users — total applications platform-wide, shortlisted/rejected/completed counts, top applied openings, top organisations, weekly platform-wide trends.
+
+**UI:** Animated charts (recharts or equivalent already used in codebase), beautiful dashboard layout, responsive, data-driven.
+
+**Feature Flag:** `FEATURE_JOB_ANALYTICS`
+
+---
+
+## CONSTRAINTS
+
+### Code Quality
+
+- Write **production-ready, optimized code only**. No placeholders, no TODOs in logic paths.
+- Strictly follow **SOLID principles**, appropriate **design patterns** (Repository, Service Layer, Factory, Observer for notifications, Strategy for scheduling modes).
+- Seamlessly match existing **architectural patterns, naming conventions, file structures, and styling** in each respective repository.
+- All 4 repositories are **independently deployed in production**. Changes must not break existing functionality in any repo.
+
+### Feature Flags
+
+- Every feature listed above MUST be wrapped in a feature flag.
+- Flag evaluation must be a single boolean check. Disabling a flag must produce zero UI/API surface change.
+- Follow the **Progressive Feature Release** pattern already established in the codebase (or implement it if absent, following industry-standard LaunchDarkly-style local flag evaluation).
+- Flags must exist in:
+
+Zinterview-backend
+,
+
+Zinterview-frontend
+,
+
+mockmate-ai
+, and
+
+interview-ui
+.
+
+### Frontend Optimization (Mockmate-AI)
+
+- **React:** `React.memo`, `useMemo`, `useCallback`, `lazy`+`Suspense` for all new pages/heavy components, code splitting per route.
+- **Virtualization:** `react-window` or `react-virtual` for all long lists (job openings, notifications, analytics tables).
+- **CSS:** CSS variables, no inline styles in render paths, GPU-composited animations only (`transform`, `opacity`), `will-change` where justified.
+- **Animations:** Framer Motion (if already used) or CSS keyframes — 60fps, no layout thrash.
+- **API:** Debounce search inputs (300ms), throttle scroll handlers, AbortController on unmount for all fetches, React Query or SWR for server state (match existing patterns).
+- **Images/Assets:** Lazy load all images, WebP format, proper `srcset`.
+- **Bundle:** Dynamic imports for all new pages.
+- All new UI **must be fully responsive** across mobile, tablet, and desktop.
+
+### Backend Optimization
+
+- **DB Queries:** Compound indexes on `job_openings` (isEnabled, openingType, createdAt, orgId), `job_applications` (candidateId, openingId, status), `notifications` (userId, isRead, createdAt).
+- **Pagination:** Cursor-based pagination (not offset) for infinite scroll endpoints.
+- **Caching:** Redis cache for public openings list (TTL: 5 min, invalidated on sync event), fitness score semantic cache (TTL: 7 days).
+- **API Design:** RESTful, versioned (`/v1/`), consistent error envelope `{ success, data, error, meta }`, rate-limited cross-server endpoints.
+
+### Security
+
+- Cross-server (Zinterview ↔ Mockmate) auth: **HMAC-signed requests** with shared secret + JWT service token + request timestamp (anti-replay, 5-min window).
+- All recruiter action endpoints: permission middleware matching existing Zinterview RBAC patterns.
+- All candidate-facing endpoints: candidate auth middleware from existing Mockmate auth patterns.
+
+### File & Folder Structure (Mockmate-AI)
+
+- New pages under `pages/jobs/`, `pages/events/`, `pages/analytics/`, `pages/notifications/`.
+- New components under `components/jobs/`, `components/notifications/`, `components/analytics/`, `components/events/`.
+- Services under `services/jobService.js`, `services/notificationService.js`, `services/analyticsService.js`.
+- Hooks under `hooks/useJobs.js`, `hooks/useNotifications.js`, `hooks/useApplicationFlow.js`.
+- Constants/enums under `constants/jobConstants.js`, `constants/featureFlags.js`.
+- Follow existing folder depth and naming conventions precisely.
+
+---
+
+## EXECUTION ORDER (Suggested)
+
+1. Schema design + DB migrations (Mockmate-AI collections).
+2. Feature flag infrastructure in all 4 repos.
+3. Zinterview-backend API exposure + cross-server auth layer.
+4. Mockmate-AI data sync + migration script.
+5. Zinterview-frontend: consent flow + config UI + nudges + Mockmate candidate tab.
+6. Mockmate-AI: Job Openings page (full UI + virtualization + search + filters + pagination).
+7. Mockmate-AI: Application flow (form + fitness score + scheduling modes).
+8. Mockmate-AI: Lifecycle tracker + notification system.
+9. Mockmate-AI: Upcoming Events page.
+10. Mockmate-AI: Job Analytics dashboard + admin view.
+11. End-to-end integration testing across all repos.
+
+---
+
+## FILE AND FOLDER REFERENCES (Preserve Exactly)
+
+Zinterview-frontend
+,
+
+Zinterview-backend
+
+mockmate-ai
+,
+
+interview-ui
+,
+
+exposeApiRoute.js
+,
+
+UserDetails.jsx
+,
+
+SideDrawer.jsx
+,
+
+ProctoredChatInterface.jsx
+,
+
+UserListTable.jsx
+.
+
+---
+
+## FINAL DIRECTIVE
+
+Read the full existing codebase context for each file/component referenced before writing. Match code style exactly. Output complete, working, production-deployable code for every file you create or modify. Do not truncate. Do not scaffold. Implement fully.
+
+
+
+
+
+Raw Explanation of Requirements of the above prompt:
+
+Strict Constraints for Your Output:
+Zero Preamble: Output only the exact final prompt. Do not include any conversational text, pleasantries, implementation plans, or your own thought process.
+Token Efficiency: Be concise and direct. Maximize the signal-to-noise ratio to conserve input tokens while retaining all critical technical context.
+Syntax Preservation: You MUST preserve all file references that start with an @ symbol (e.g., @src/utils/parser.js) exactly as provided. Do not alter them, as these are strict system hooks for the Antigravity workspace.
+Agent Directives: The generated prompt must explicitly instruct the Antigravity agent to:
+Write highly optimized, production-ready code.
+Strictly adhere to SOLID principles, appropriate design patterns, and best coding practices.
+Seamlessly match the architectural patterns, styling, and file structures of the existing codebase.
+Make sure to build all the features and functionalities in @Zinterview-backend, @Zinterview-frontend, @mockmate-ai, and @interview-ui, as flagged features. Use feature flags to enable and disable any feature/functionality with one simple flag switch.
+Make sure that the entire UI built in mockmate-ai should be responsive on all screen sizes.
+There are 4 repositories in the environment: Zinterview-backend, Zinterview-frontend, zinterview-workspace, and mockmate-ai. So be very careful when making changes, without breaking anything, and keep in mind that they should also work in production, as all the repositories are deployed separately for production.
+As the @mockmate-ai repository is slowly growing and expanding, I want you to maintain and keep up a proper file and folder structure as per industry standards.
+Use all the best industry practices to use all the Frontend optimisation techniques(React optimisation techniques, CSS optimisation techniques, Animations and Javascript optimisation techniques), best API design practices, query optimization techniques, caching strategies wherever possible, best use of DSA for peak performance, leverage in-depth concepts and system design to make the mockmate-ai application stand out.
+Formatting: Structure the generated prompt using clear, parseable markdown (e.g., Context, Objectives, Constraints, Target Files) so the Antigravity agent can process it logically.
+Raw Task Requirements to Convert:
+Goal: To leverage showing the Job Openings from Zinterview in the mockmate-ai, where candidates should be able to apply for the jobs, give AI interviews, stay updated via notifications, etc.
+
+Flow & Explanation:
+1. The flow starts from the Zinterview-frontend. When a user from an organisation creates an opening successfully, at the last step of opening creation or immediately after completion of opening creation (choose the best place that draws user attention), we need to show a consent pop-up asking if they want to allow the posting of the opening on our candidate portal, allowing candidates from our candidate portal to apply for this opening. This option should be provided for all the existing active job openings, so that the recruiter can open and give consent to allow the candidates to apply if they want. Followed by consent, this enabling needs one more step to complete. We need to take some inputs from the recruiter before enabling this. The default options should generally be: allow all candidates to apply, no resume fitness restriction, and the candidate is allowed to schedule their own interview at their preferred time. Now the recruiter should be able to edit/modify all these options. The recruiter should be able to set a minimum resume fitness score as a qualification mark for the candidates to apply. Even after this step, we can give the recruiter the option to allow the candidate into the openings after their profile review. Enabling this option would need the recruiter’s careful review and approval to add that candidate to the respective opening. At last, we need to give options to the recruiter to choose from on how they want to schedule an interview with the registered candidates from the candidate portal: Give a timeframe within which the candidate can select a suitable time, and complete the interview; the recruiter manually schedules the interview; interview should be scheduled and conducted immediately after the candidate applies(if they don’t need any approval), candidate can give the interview any time they want from the date of apply. In Zinterview, when an opening is created, we have a direct link for every opening, something like "https://app.zinterview.ai/interview/:openingId" for production. Basically, this directly opens the UI from @Zinterview-frontend, asking for user registration at the first step, and after successful registration, it opens "https://interview.zinterview.ai/interview/:interviewReportId" from which the flow continues as in @interview-ui. But when a candidate applies from the mockmate-ai, we need to take the required details for the user registration from the mockmate-ai application only, and register the user for the specific opening using the respective APIs. This way, we can take the candidate directly to the interview link to start the interview without any other needs. 
+2. This way, the first step from the Zinterview recruiter side will be done to allow posting the job opening or not in the candidate portal(which is mockmate-ai). We need to allow the recruiter to modify the consent settings(regarding minimum resume-fitness score, interview scheduling options, candidate entry options(with/without approval), etc) at any time. Recruiters from the organization should be able to disable/stop candidates from applying through mockmate-ai at any time they want. 
+3. I want you to build a beautiful, attractive, animated, structured, optimised for high-quality and speed UI with highly user attention-grabbing UI/UX for all the above-mentioned things in the @Zinterview-frontend and @interview-ui (if needed). I want you to follow the same structure and quality, or even better quality, as in the existing repository code bases.
+4. Even if the recruiter hasn't selected an option to allow candidate registrations from our candidate portal(mockmate-ai), we need to show some Nudges in the particular opening and all openings pages in @Zinterview-frontend to grab the user's attention on allowing the candidates from the candidate portal to apply to that particular opening. We need to show banners, marketing lines, etc., attracting the recruiter so that they can find the true talent, perfect fit, etc via this. There should be an option in every opening, even in already existing and active ones, that should take the same details regarding allowing candidates from mockmate-ai, resume fit score, and interview scheduling if missed or chose not to allow before while creating the opening, but changed their mind later. We need to always attract users with our lines, features, UI/UX to make them do what we want them to do.
+5. Now coming to the mockmate side, in the @mockmate-ai frontend, I want a new section for Active Job Openings. This should be a separate option in @Sidebar.js to navigate to the new page on Active Job Openings. I also want you to build and come up with some nudges, banners, marketing lines, etc., in the same way as done for the "Proctored Interview" pitching. In the same way, I want some impeccable UI designs, highly attractive, animated, attention-grabbing, and the most beautiful UI for the Entire Active Job Openings page, as well as the Nudges, banners, marketing lines, etc. I want to nudge the users with the recently posted job openings daily until they apply or want to avoid those postings.
+6. In the Active Job Openings page, I want you to show the job openings fetched from the Zinterview from all the organisations, sorted such that the newest openings always appear at the top. I want you to present each Job opening in a beautiful, attractive design, so that, initially, each opening shows only an overview or preview on the card or whatever you design to display it. We need to mainly show the details like Job Title, Organisation, Location, Expected Skills(apply ellipsis if there are too many), Posted date, Current Status(Actively looking or not), etc., that can grab the user's attention. When the user opens it, they should see all the complete details, along with the Job Description and other details given while creating the opening, and related to the Job must be shown in detail. Also, I believe adding a “Zinterview Verified” Badge on all the jobs, which visually signals that applications require a verified interview or the job is verified by our team. Example badge on the card: Zinterview Verified Hiring. I want you to make sure that the openings whose openingType is not "codingRound" are only fetched and shown.
+7. The job application process/flow from the mockmate-ai should be as follows. There are actually 2 approaches before allowing candidates to apply for a job opening. The candidate should and must give a proctored interview first from our mockmate-ai application before proceeding to apply to any job. Or we can also allow candidates without this step. As this is a new feature, first, we want to make sure we get genuine candidates, and hence, we want to add a layer of protection by asking candidates to take a proctored interview via Mockmate-ai. So I want you to build this as a flagged feature, such that whenever I want, I should be able to switch the flag accordingly, allowing or disallowing candidates to apply to jobs accordingly, with or without a proctored interview on mockmate-ai. If the candidate needs to give a proctored interview first, we need to show appropriate buttons and redirect them to the proctored interview page directly. Once the interview status is completed, on every Job Opening and every job description the candidate opens, they need to see a glowing Apply button. When the user clicks on the Apply button, if the candidates are no longer allowed to apply for that job, we need to tell that the job opening is no longer active and should disable/stop showing the job opening. If everything is ok, then when the user clicks the Apply button, a pre-filled form with all the details will be displayed, the same as will be asked in the @UserDetails.jsx "https://app.zinterview.ai/interview/:openingId" page. The form should be filled with the existing details in our mockmate-ai application. Build a better-looking, attractive UI. The user should be able to select the existing resume or upload a new one. We need to maintain an LRU cache of the 5 most recent uploaded resumes by the user in our database, allowing them to choose to upload whatever they want while applying. When the user is about to submit their first application, we need to show them a popup or modal or something else that need to ask the user if they are ok to use the same details, resume, etc for all the applications so that when they apply for another job again, the form should not again show up, instead it should be directly applied with the saved details. Also, we need to give the candidate a global option to edit and save the details that need to be considered while applying for a job.
+8. Once the user's job from the frontend is done, submitting the form details with the selected job opening, I want you to first calculate the Resume-fitness score for the respective opening immediately. The Resume-fitness score calculation prompt should be very clear, perfect, with high accuracy, following industry standard metrics and parameters for the most precise calculation. Please refer to the existing one used in the @Zinterview-backend and come up with something that executes at lightning speed and should give the same output as the one from Zinterview. In the meantime, when the Resume fit score is being generated, we need to show the user an absolutely stunning Loading state UI, making the user not move away from the screen in the meantime. We need to say to the user something like this step lets you know how good a match this job is for you, based on which you can decide to apply or improve your resume accordingly. Once the calculation is done, we need to show their fitness score for the job they are applying for in a very attractive, animated UI, dynamically based on the different levels of the score. We need to encourage or suggest to the user to proceed with the job application or not, based on how high or low the fitness score is. We recommend them to upskill and improve their resume if their scores are low, and ask them to proceed if they are pretty high. I want you to implement a caching mechanism using the GPTCache library to store the responses of the respective prompts in a semantic manner so that, when the same candidate with the same resume and almost similar job(more than 90-95%), then we need not generate Resume-fitness scores again and again. We should be able to use the existing ones already from the cache. This will save the Gemini LLM token costs, I guess. Implement this in the best way possible, such that the responses are accurate and the cost of the tokens is saved. Once the user decides to proceed to apply, irrespective of their fitness scores, in Zinterview-backend, we need to validate the application according to the organisation's opening configuration if the candidate's resume fitness meets their needs or not. Here, you need to decide whether to implement Zinterview's resume fitness calculation mechanism again or use the already calculated score from the mockmate-ai again. I want you to choose the best way of implementation possible. And if the score is not up to the mark, then we need to show the rejection to the user in Mockmate that the organisation is looking for candidates with better fitness. If the candidate is up to the mark, then we need to handle the interview scheduling according to the configuration set by the recruiter in the opening. If the recruiter manually wants to schedule at some time, then we just show an attractive success pop-up to the candidate on successful application, saying to expect a call from the HR of the respective organisation soon. If the recruiter sets the config allowing users to schedule their own interview, then similar steps as in @ProctoredInterview at the last on scheduling the interview, something similar to UI should be shown, and the interview should be scheduled accordingly. If the recruiter wants the candidate to give the interview immediately when they apply, then before the candidate clicks "Apply" in Mockmate-ai, we should tell the candidate that they need to attend an interview on the go if they proceed to apply, and according to the candidate's response, it should proceed accordingly. If the recruiter allows the candidate to give an interview at any time as per their wish, then we need to show a Proceed to interview with the interview link so that the candidate can proceed whenever they want. After every successful application, we need to enable the "Proceed Interview" option according to the use case and configuration. This is the application flow.
+9. In the main Job Openings page, I also want you to implement various kinds of filters, server-side pagination, a global search bar, etc. I want you to build a robust search bar that shows all the openings based on the keywords entered, which may be the Role, title, organisation, skills, etc., or a combination of all or some of these, separated by a comma. We need some filters to filter openings by experience, location, organisation, applied, saved, need to give an interview, Interview in Progress, Interview completed, etc. I want you to implement a robust server-side pagination on the backend for fetching openings and an Infinite scroll on the frontend accordingly. Also, I would suggest you use the React virtualization window to handle the large list of items(job openings). 
+10. Once the interviews for the applications for the job opening are done, the respective completion statuses should be reflected in the mockmate-ai Job Openings. I want you to implement and show an attractive life cycle and stages of each job application, respectively. Also, in @mockmate-ai, I want you to build a robust notification system where candidates receive updates on the recruiter’s action on their applications. An in-app notification system should be built, as well as via email from mockmate-ai. The notification UI should be very attractive, animated, user-friendly, user-centric, and attention-grabbing UI/UX design. Design the appropriate schema for the database to store notifications per user, or in the best way possible. When the user opens notifications in the application, first, they should be able to see only the 10-15 most recent notifications. Only the remaining should be fetched with applied pagination on the server side when the user scrolls infinitely or via using the load more option. We also need to give a show all notifications option, which should open a new page with all the notifications accordingly, with an infinite scroll and a virtualization window implemented here.
+11. I want you to build a Job Analytics dashboard per user. The user should be able to view their job analytics in a separate page that could be redirected from the @Sidebar, as well as the new Job Opening page or any other relevant pages. In this analytics page, I want you to show them their numbers on applications, shortlisted, rejected, interviews pending, interviews completed, average match percentage of resume to job opening they applied, recruiter's response rates,  and more. I want you to track and show them their weekly reports, growth graph, and other ways to show the user as much as possible in a very beautiful, animated, attractive, visually amazing graphical, and analytical information regarding everything. I want you to show the admin users in the mockmate-ai the same UI for every user they want to see. In the @UserListTable.jsx I want you to add one more option in Actions to every user "Job Analytics", to open and view the respective page. If the user has 0 applications, then there is no need to show this option both in the admin dashboard as well as in the normal user's UI. I also want you to add the analytics regarding the overall job application numbers in the admin dashboard. I want to show all the aspects possible to the admin.
+12. Coming back to the @Zinterview-frontend side, I want you to show the candidates that came from the candidate portal in an opening in a separate way/view or with some special indication. This should depend on the configuration of the allowance of candidates from Mockmate to the particular opening. If a recruiter's approval is needed, then it is better to have a separate tab in the candidates table view in the opening, such that opening it should have all the candidate details in the table, along with the option to view their resume, previous interview history reports, transcripts, recordings, etc. The recruiter should be able to take actions like Approve/Decline, based on which the candidate will be added to the opening or will receive a rejected status on the mockmate UI. Make sure that the users(recruiters) of Zinterview who can take any actions on the candidate should only be able to approve or decline the candidate accordingly. Any user with only view permission should not be able to take any action on these candidate applications from mockmate-ai. Based on the actions of the Recruiter, the application stage and lifecycle should be accordingly updated on the candidate side in the mockmate-ai side. Also, the candidate should receive a notification on the recruiter's action in the app and via email after some time if the candidate hasn’t checked the notification yet. Maintain a set of attractive in-app notifications and email templates to follow structural patterns accordingly.
+13. I also want you to build a fantastic-looking UI for showing the Upcoming Events section in the @mockmate-ai. This should show all the upcoming interviews or any other actions that should be taken by the candidate. This should contain not only the upcoming interviews or events, but also the past interviews and events tab/section.
+14. Write new APIs in Zinterview-backend to @exposeApiRoute.js and other related files like controllers, services, etc, as required. I want an API that fetches all currently active openings for every organisation, with minimal required details, and displays them on mockmate-ai. I want you to also check and expose all the api's that need to be exposed to perform all the needed operations related to the candidate's registration and other things from Mockmate. Also, expose the required APIs from the mockmate, if any are needed for the Zinterview. I want you to also implement a secure way of doing all these API calls among both these different servers with proper authentication and authorization.
+15. I want you to migrate all the active openings that are not of type codingRound in the Zinterview and store them in a new collection of the mockmate-ai database, such that there wouldn't be a need to extract from the Zinterview backend using those APIs. This eliminates a layer and fastens the execution time. Also, when the recruiter allows posting their job opening on the candidate portal while creating a new opening or even editing for an existing opening, I want a record of that opening to be created in the mockmate-ai database immediately to maintain a proper sync between the systems. Have a flag for enabled or not in the mockmate-ai database collection so that if the recruiter closes an opening at any time, it should be reflected accordingly in the mockmate-ai immediately using the respective APIs.
+16. All UI's or functionalities you write in the @Zinterview-frontend and @Zinterview-backend should follow the Feature Flags (Progressive Feature Release) implementation pattern. I should be able to enable and disable the respective features, UI, etc., with a simple click and a flag, respectively. Also, follow the same pattern in @mockmate-ai. Make sure to do the schema design, system design, and architecture for the above entire flow in a very optimised, robust, and extensible manner.
+17. You are open to more additions, requirements, suggestions, better implementation, and integration suggestions wherever possible. You are allowed to come up with more and more optimisation strategies, better UI/UX workflows, and more. I would appreciate everything you come up with that could help in any way in this implementation.
+
+

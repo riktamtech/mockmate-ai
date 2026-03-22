@@ -9,6 +9,9 @@ import {
   Settings,
   ChartNoAxesCombined,
   Sparkles,
+  Briefcase,
+  Calendar,
+  BarChart3,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppStore } from "../store/useAppStore";
@@ -53,6 +56,22 @@ export const SideDrawer = ({ isOpen, onClose }) => {
       label: "Proctored Interview",
       path: "/mockmate/candidate/proctored-interview",
       badge: "NEW",
+    },
+    {
+      icon: Briefcase,
+      label: "Active Job Openings",
+      path: "/mockmate/candidate/jobs",
+      badge: "NEW",
+    },
+    {
+      icon: Calendar,
+      label: "Events",
+      path: "/mockmate/candidate/events",
+    },
+    {
+      icon: BarChart3,
+      label: "Job Analytics",
+      path: "/mockmate/candidate/analytics",
     },
     {
       icon: Settings,

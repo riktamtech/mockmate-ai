@@ -46,6 +46,18 @@ const appConfigSchema = new mongoose.Schema(
       },
       lastToggledAt: { type: Date, default: null },
     },
+    // ── Mockmate-AI Integration Feature Flags ───────────────────
+    FEATURE_JOB_OPENINGS_PAGE: { type: Boolean, default: true },
+    FEATURE_JOB_APPLICATION_FLOW: { type: Boolean, default: true },
+    FEATURE_REQUIRE_PROCTORED_INTERVIEW_BEFORE_APPLY: {
+      type: Boolean,
+      default: true,
+    },
+    FEATURE_APPLICATION_LIFECYCLE: { type: Boolean, default: true },
+    FEATURE_NOTIFICATION_SYSTEM: { type: Boolean, default: true },
+    FEATURE_UPCOMING_EVENTS: { type: Boolean, default: true },
+    FEATURE_JOB_ANALYTICS: { type: Boolean, default: true },
+    FEATURE_MOCKMATE_DB_SYNC: { type: Boolean, default: true },
   },
   {
     timestamps: true,

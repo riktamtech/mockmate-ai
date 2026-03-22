@@ -47,6 +47,12 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/audio", aiLimiter, audioRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/proctored", proctoredLimiter, proctoredInterviewRoutes);
+app.use("/api/jobs", require("./routes/jobRoutes"));
+app.use("/api/notifications", require("./routes/notificationRoutes"));
+app.use("/api/events", require("./routes/eventsRoutes"));
+app.use("/api/analytics", require("./routes/analyticsRoutes"));
+app.use("/api/applications", require("./routes/applicationRoutes"));
+app.use("/api/fitness", require("./routes/fitnessRoutes"));
 
 // Health Check
 app.get("/", (req, res) => {

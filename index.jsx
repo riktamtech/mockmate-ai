@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import LogRocket from "logrocket";
 import App from "./App";
 
-if (window.hostname !== "localhost") {
+if (window.location.hostname !== "localhost") {
   LogRocket.init("qgmxv2/zi-mockmate");
 }
 
