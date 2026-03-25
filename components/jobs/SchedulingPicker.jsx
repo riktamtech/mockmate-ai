@@ -20,7 +20,7 @@ function getWeekDays(startDate) {
   return days;
 }
 
-export default function SchedulingPicker({ onSelect, onCancel }) {
+export default function SchedulingPicker({ timeFrame, onSelect, onCancel }) {
   const [weekStart, setWeekStart] = useState(() => {
     const now = new Date();
     const mon = new Date(now);
@@ -45,7 +45,21 @@ export default function SchedulingPicker({ onSelect, onCancel }) {
   const isSelectable = (date) => {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
-    return d >= today && d.getDay() !== 0 && d.getDay() !== 6;
+
+    // Filter weekends and past days by default
+    let isDefaultValid = d >= today && d.getDay() !== 0 && d.getDay() !== 6;
+    
+    // If a timeframe is provided, strictly enforce it
+    if (timeFrame?.startDate && timeFrame?.endDate) {
+      const start = new Date(timeFrame.startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(timeFrame.endDate);
+      end.setHours(0, 0, 0, 0);
+      
+      return isDefaultValid && d >= start && d <= end;
+    }
+    
+    return isDefaultValid;
   };
 
   const handleConfirm = () => {
@@ -60,9 +74,9 @@ export default function SchedulingPicker({ onSelect, onCancel }) {
   const btnStyle = (active) => ({
     padding: "8px",
     borderRadius: "8px",
-    border: active ? "1px solid rgba(139,92,246,0.5)" : "1px solid rgba(255,255,255,0.06)",
-    background: active ? "rgba(139,92,246,0.1)" : "transparent",
-    color: active ? "#8B5CF6" : "rgba(255,255,255,0.5)",
+    border: active ? "1px solid var(--accent)" : "1px solid var(--border-subtle)",
+    background: active ? "var(--accent-bg)" : "transparent",
+    color: active ? "var(--accent-text)" : "var(--text-muted)",
     fontSize: "12px",
     fontWeight: active ? 600 : 400,
     cursor: "pointer",
@@ -70,15 +84,15 @@ export default function SchedulingPicker({ onSelect, onCancel }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-      <h4 style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "#f1f1f4", display: "flex", alignItems: "center", gap: "8px" }}>
-        <Calendar size={16} color="#8B5CF6" /> Pick Your Interview Slot
+      <h4 style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "8px" }}>
+        <Calendar size={16} style={{ color: "var(--accent)" }} /> Pick Your Interview Slot
       </h4>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <button onClick={() => navigateWeek(-1)} disabled={weekStart <= today} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", padding: "4px" }}><ChevronLeft size={18} /></button>
-        <span style={{ fontSize: "13px", fontWeight: 500, color: "rgba(255,255,255,0.6)" }}>
+        <button onClick={() => navigateWeek(-1)} disabled={weekStart <= today} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px" }}><ChevronLeft size={18} /></button>
+        <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-secondary)" }}>
           {weekDays[0].toLocaleDateString("en-US",{month:"short",day:"numeric"})} — {weekDays[6].toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
         </span>
-        <button onClick={() => navigateWeek(1)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", padding: "4px" }}><ChevronRight size={18} /></button>
+        <button onClick={() => navigateWeek(1)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "4px" }}><ChevronRight size={18} /></button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: "6px" }}>
         {weekDays.map((day) => {
@@ -86,25 +100,35 @@ export default function SchedulingPicker({ onSelect, onCancel }) {
           const isSel = selectedDate?.toDateString() === day.toDateString();
           return (
             <button key={day.toISOString()} onClick={() => sel && (setSelectedDate(day), setSelectedTime(null))} style={{ ...btnStyle(isSel), display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", opacity: sel ? 1 : 0.3, cursor: sel ? "pointer" : "not-allowed" }}>
-              <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)" }}>{day.toLocaleDateString("en-US",{weekday:"short"})}</span>
-              <span style={{ fontSize: "14px", fontWeight: isSel ? 700 : 500, color: isSel ? "#8B5CF6" : "#f1f1f4" }}>{day.getDate()}</span>
+              <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{day.toLocaleDateString("en-US",{weekday:"short"})}</span>
+              <span style={{ fontSize: "14px", fontWeight: isSel ? 700 : 500, color: isSel ? "var(--accent-text)" : "var(--text-primary)" }}>{day.getDate()}</span>
             </button>
           );
         })}
       </div>
       {selectedDate && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <p style={{ margin: "0 0 8px", fontSize: "12px", color: "rgba(255,255,255,0.4)", display: "flex", alignItems: "center", gap: "6px" }}>
+          <p style={{ margin: "0 0 8px", fontSize: "12px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
             <Clock size={12} /> Slots for {selectedDate.toLocaleDateString("en-US",{month:"short",day:"numeric"})}
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "6px" }}>
-            {TIME_SLOTS.map((t) => <button key={t} onClick={() => setSelectedTime(t)} style={btnStyle(selectedTime === t)}>{t}</button>)}
+            {TIME_SLOTS.filter(t => {
+              if (timeFrame?.startDate && timeFrame?.endDate) {
+                const [h, m] = t.split(":").map(Number);
+                const dt = new Date(selectedDate);
+                dt.setHours(h, m, 0, 0);
+                const start = new Date(timeFrame.startDate);
+                const end = new Date(timeFrame.endDate);
+                return dt >= start && dt <= end;
+              }
+              return true;
+            }).map((t) => <button key={t} onClick={() => setSelectedTime(t)} style={btnStyle(selectedTime === t)}>{t}</button>)}
           </div>
         </motion.div>
       )}
       <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
-        <button onClick={onCancel} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "rgba(255,255,255,0.5)", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
-        <button onClick={handleConfirm} disabled={!selectedDate||!selectedTime} style={{ flex: 2, padding: "12px", borderRadius: "10px", background: selectedDate&&selectedTime ? "linear-gradient(135deg,#8B5CF6,#3B82F6)" : "rgba(255,255,255,0.05)", border: "none", color: selectedDate&&selectedTime ? "#fff" : "rgba(255,255,255,0.2)", cursor: selectedDate&&selectedTime ? "pointer" : "not-allowed", fontSize: "13px", fontWeight: 600 }}>Confirm Slot</button>
+        <button onClick={onCancel} style={{ flex: 1, padding: "12px", borderRadius: "10px", border: "1px solid var(--border-subtle)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
+        <button onClick={handleConfirm} disabled={!selectedDate||!selectedTime} style={{ flex: 2, padding: "12px", borderRadius: "10px", background: selectedDate&&selectedTime ? "var(--accent-gradient)" : "var(--hover-overlay-medium)", border: "none", color: selectedDate&&selectedTime ? "#fff" : "var(--text-muted)", cursor: selectedDate&&selectedTime ? "pointer" : "not-allowed", fontSize: "13px", fontWeight: 600 }}>Confirm Slot</button>
       </div>
     </div>
   );

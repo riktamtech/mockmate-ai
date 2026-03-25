@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Check, CheckCheck, ExternalLink, X } from "lucide-react";
 import { useNotifications } from "../../hooks/useNotifications";
@@ -6,6 +6,7 @@ import { useNotifications } from "../../hooks/useNotifications";
 /**
  * NotificationBell — Bell icon with animated unread count badge.
  * Click to reveal the NotificationPanel dropdown.
+ * All colors use CSS custom properties for theme awareness.
  */
 
 export function NotificationBell() {
@@ -26,7 +27,7 @@ export function NotificationBell() {
           cursor: "pointer",
           padding: "8px",
           borderRadius: "12px",
-          color: "rgba(255, 255, 255, 0.6)",
+          color: "var(--text-muted)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -46,7 +47,7 @@ export function NotificationBell() {
                 width: unreadCount > 9 ? "20px" : "16px",
                 height: "16px",
                 borderRadius: "8px",
-                background: "#EF4444",
+                background: "var(--error)",
                 color: "#fff",
                 fontSize: "10px",
                 fontWeight: 700,
@@ -82,6 +83,7 @@ export function NotificationBell() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.95 }}
               transition={{ duration: 0.2 }}
+              className="glass"
               style={{
                 position: "absolute",
                 top: "100%",
@@ -89,10 +91,9 @@ export function NotificationBell() {
                 width: "360px",
                 maxHeight: "440px",
                 borderRadius: "16px",
-                background: "rgba(25, 25, 40, 0.95)",
-                backdropFilter: "blur(16px)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-                boxShadow: "0 20px 60px rgba(0, 0, 0, 0.4)",
+                background: "var(--bg-glass)",
+                border: "1px solid var(--bg-glass-border)",
+                boxShadow: "var(--bg-glass-shadow)",
                 zIndex: 50,
                 overflow: "hidden",
                 display: "flex",
@@ -106,14 +107,14 @@ export function NotificationBell() {
                   alignItems: "center",
                   justifyContent: "space-between",
                   padding: "14px 16px",
-                  borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+                  borderBottom: "1px solid var(--border-subtle)",
                 }}
               >
                 <span
                   style={{
                     fontSize: "14px",
                     fontWeight: 600,
-                    color: "#f1f1f4",
+                    color: "var(--text-primary)",
                   }}
                 >
                   Notifications
@@ -126,7 +127,7 @@ export function NotificationBell() {
                         background: "none",
                         border: "none",
                         cursor: "pointer",
-                        color: "rgba(139, 92, 246, 0.8)",
+                        color: "var(--accent-text)",
                         fontSize: "11px",
                         fontWeight: 500,
                         display: "flex",
@@ -154,7 +155,7 @@ export function NotificationBell() {
                     style={{
                       padding: "40px 20px",
                       textAlign: "center",
-                      color: "rgba(255, 255, 255, 0.3)",
+                      color: "var(--text-muted)",
                       fontSize: "13px",
                     }}
                   >
@@ -165,7 +166,7 @@ export function NotificationBell() {
                     <motion.div
                       key={notification._id}
                       whileHover={{
-                        background: "rgba(255, 255, 255, 0.03)",
+                        background: "var(--hover-overlay-medium)",
                       }}
                       onClick={() => {
                         if (!notification.isRead) {
@@ -174,8 +175,7 @@ export function NotificationBell() {
                       }}
                       style={{
                         padding: "12px 16px",
-                        borderBottom:
-                          "1px solid rgba(255, 255, 255, 0.03)",
+                        borderBottom: "1px solid var(--border-subtle)",
                         cursor: "pointer",
                         display: "flex",
                         gap: "10px",
@@ -190,7 +190,7 @@ export function NotificationBell() {
                           borderRadius: "50%",
                           background: notification.isRead
                             ? "transparent"
-                            : "#8B5CF6",
+                            : "var(--accent)",
                           marginTop: "6px",
                           flexShrink: 0,
                         }}
@@ -202,8 +202,8 @@ export function NotificationBell() {
                             fontSize: "13px",
                             fontWeight: notification.isRead ? 400 : 600,
                             color: notification.isRead
-                              ? "rgba(255, 255, 255, 0.5)"
-                              : "#f1f1f4",
+                              ? "var(--text-secondary)"
+                              : "var(--text-primary)",
                             lineHeight: 1.4,
                           }}
                         >
@@ -214,7 +214,7 @@ export function NotificationBell() {
                             style={{
                               margin: "2px 0 0",
                               fontSize: "11px",
-                              color: "rgba(255, 255, 255, 0.35)",
+                              color: "var(--text-muted)",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
@@ -227,17 +227,18 @@ export function NotificationBell() {
                           style={{
                             margin: "4px 0 0",
                             fontSize: "10px",
-                            color: "rgba(255, 255, 255, 0.25)",
+                            color: "var(--text-muted)",
                           }}
                         >
-                          {new Date(
-                            notification.createdAt,
-                          ).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {new Date(notification.createdAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}
                         </p>
                       </div>
                     </motion.div>
@@ -250,14 +251,14 @@ export function NotificationBell() {
                 <div
                   style={{
                     padding: "10px 16px",
-                    borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+                    borderTop: "1px solid var(--border-subtle)",
                     textAlign: "center",
                   }}
                 >
                   <a
                     href="/mockmate/candidate/notifications"
                     style={{
-                      color: "rgba(139, 92, 246, 0.8)",
+                      color: "var(--accent-text)",
                       fontSize: "12px",
                       fontWeight: 500,
                       textDecoration: "none",

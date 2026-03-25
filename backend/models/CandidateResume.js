@@ -31,8 +31,18 @@ const resumeEntrySchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
-    // Cached parsed data
-    parsedText: {
+    lastUsedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    // Cached parsed data (compressed via zlib deflate → Base64)
+    extractedText: {
+      type: String,
+      default: "",
+      select: false, // Don't return by default (large field)
+    },
+    // AI-generated structured resume summary (compressed via zlib deflate → Base64)
+    resumeSummary: {
       type: String,
       default: "",
       select: false, // Don't return by default (large field)

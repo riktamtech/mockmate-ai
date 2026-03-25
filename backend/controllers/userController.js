@@ -1,7 +1,10 @@
 const User = require('../models/User');
+const CandidateResume = require('../models/CandidateResume');
 const { uploadFile, getAudioUrl, deleteAudio } = require('../services/s3Service');
 const { v4: uuidv4 } = require('uuid');
 const { GoogleGenAI } = require("@google/genai");
+const { compressText } = require('../services/compressionUtils');
+const { generateResumeSummary } = require('../services/fitnessScoreService');
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || '' });
 
@@ -276,6 +279,64 @@ IMPORTANT: Return ONLY valid JSON, no markdown, no explanation.`
 
     // Generate signed URL for immediate use
     const signedUrl = await getAudioUrl(s3Key, 86400);
+
+    // Save to CandidateResume LRU cache for application flow
+    try {
+      let resumeDoc = await CandidateResume.findOne({ userId: user._id });
+      if (!resumeDoc) {
+        resumeDoc = new CandidateResume({ userId: user._id, resumes: [] });
+      }
+
+      // Extract raw text for future fitness scoring
+      let rawText = '';
+      try {
+        const textResult = await ai.models.generateContent({
+          model: 'gemini-2.0-flash',
+          contents: [{
+            role: 'user',
+            parts: [
+              { inlineData: { mimeType, data: base64Data } },
+              { text: 'Extract ALL text content from this document exactly as it appears. Return ONLY the raw text content — no markdown, no explanations.' },
+            ],
+          }],
+          config: { temperature: 0.1, maxOutputTokens: 8192 },
+        });
+        rawText = textResult?.text?.trim() || '';
+      } catch (textErr) {
+        console.error('Raw text extraction failed (non-fatal):', textErr.message);
+      }
+
+      // Generate resume summary in background
+      let resumeSummaryText = '';
+      if (rawText) {
+        try {
+          const { summary } = await generateResumeSummary(rawText);
+          resumeSummaryText = summary;
+        } catch (summaryErr) {
+          console.error('Resume summary generation failed (non-fatal):', summaryErr.message);
+        }
+      }
+
+      const resumeEntry = {
+        resumeKey: s3Key,
+        fileName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        fileSize: req.file.size,
+        uploadedAt: new Date(),
+        lastUsedAt: new Date(),
+        extractedText: compressText(rawText),
+        resumeSummary: compressText(resumeSummaryText),
+      };
+
+      resumeDoc.addResume(resumeEntry);
+      // Set as default if it's the first resume
+      if (resumeDoc.resumes.length === 1) {
+        resumeDoc.defaultResumeId = resumeDoc.resumes[0]._id;
+      }
+      await resumeDoc.save();
+    } catch (cacheErr) {
+      console.error('Failed to cache resume (non-fatal):', cacheErr.message);
+    }
 
     res.json({
       message: 'Resume parsed successfully',

@@ -46,6 +46,7 @@ By signing below, you confirm that you have read, understood, and agree to all t
 
 /**
  * Consent modal with Terms & Conditions and digital signature pad.
+ * Theme-aware via CSS custom properties + glassmorphism.
  */
 export const ConsentModal = React.memo(
   ({ isOpen, onClose, onAccept, isLoading = false }) => {
@@ -56,7 +57,6 @@ export const ConsentModal = React.memo(
     const [acknowledged, setAcknowledged] = useState(false);
     const [hasScrolled, setHasScrolled] = useState(false);
 
-    // ── Canvas setup ────────────────────────────────────────────────────
     useEffect(() => {
       if (!isOpen || !canvasRef.current) return;
       const canvas = canvasRef.current;
@@ -68,7 +68,9 @@ export const ConsentModal = React.memo(
       ctx.scale(dpr, dpr);
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      ctx.strokeStyle = "#1e293b";
+      // Use theme-appropriate stroke color
+      const isDark = document.documentElement.classList.contains("dark");
+      ctx.strokeStyle = isDark ? "#e4e4e7" : "#1e293b";
       ctx.lineWidth = 3.5;
     }, [isOpen]);
 
@@ -169,25 +171,48 @@ export const ConsentModal = React.memo(
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
         {/* Backdrop */}
         <div
-          className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+          className="absolute inset-0 glass"
+          style={{ background: "var(--backdrop)" }}
           onClick={onClose}
         />
 
         {/* Modal */}
-        <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col animate-fade-in-up overflow-hidden">
+        <div
+          className="relative rounded-2xl max-w-lg w-full max-h-[90vh] flex flex-col animate-fade-in-up overflow-hidden theme-transition"
+          style={{
+            background: "var(--bg-surface)",
+            boxShadow: "var(--shadow-lg)",
+            border: "1px solid var(--border)",
+          }}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between p-5 border-b border-slate-100">
+          <div
+            className="flex items-center justify-between p-5"
+            style={{ borderBottom: "1px solid var(--border-subtle)" }}
+          >
             <div>
-              <h2 className="text-lg font-bold text-slate-900">
+              <h2
+                className="text-lg font-bold"
+                style={{ color: "var(--text-primary)" }}
+              >
                 Terms & Conditions
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                 Please read and sign to continue
               </p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+              className="p-2 rounded-full transition-colors"
+              style={{ color: "var(--text-muted)" }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "var(--hover-overlay-medium)";
+                e.currentTarget.style.color = "var(--text-primary)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--text-muted)";
+              }}
               aria-label="Close modal"
             >
               <X size={20} />
@@ -198,13 +223,18 @@ export const ConsentModal = React.memo(
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
             {/* Terms text */}
             <div
-              className="bg-slate-50 rounded-xl p-4 max-h-72 overflow-y-auto text-xs text-slate-600 leading-relaxed whitespace-pre-wrap border border-slate-200"
+              className="rounded-xl p-4 max-h-72 overflow-y-auto text-xs leading-relaxed whitespace-pre-wrap custom-scrollbar"
+              style={{
+                background: "var(--bg-inset)",
+                color: "var(--text-secondary)",
+                border: "1px solid var(--border)",
+              }}
               onScroll={handleTermsScroll}
             >
               {TERMS_TEXT}
             </div>
             {!hasScrolled && (
-              <p className="text-xs text-amber-600 font-medium text-center">
+              <p className="text-xs font-medium text-center" style={{ color: "var(--warning)" }}>
                 ↓ Please scroll to the bottom to read all terms
               </p>
             )}
@@ -212,14 +242,20 @@ export const ConsentModal = React.memo(
             {/* Signature pad */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
-                  <PenLine size={14} className="text-blue-500" />
+                <label
+                  className="text-sm font-semibold flex items-center gap-1.5"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  <PenLine size={14} style={{ color: "var(--accent)" }} />
                   Your Digital Signature
                 </label>
                 {hasSigned && (
                   <button
                     onClick={clearSignature}
-                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-500 transition-colors"
+                    className="flex items-center gap-1 text-xs transition-colors"
+                    style={{ color: "var(--text-muted)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--error)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
                   >
                     <RotateCcw size={12} /> Clear
                   </button>
@@ -238,7 +274,7 @@ export const ConsentModal = React.memo(
                 onTouchEnd={stopDraw}
               />
               {!hasSigned && (
-                <p className="text-xs text-slate-400 text-center mt-1">
+                <p className="text-xs text-center mt-1" style={{ color: "var(--text-muted)" }}>
                   Draw your signature above
                 </p>
               )}
@@ -250,9 +286,16 @@ export const ConsentModal = React.memo(
                 type="checkbox"
                 checked={acknowledged}
                 onChange={(e) => setAcknowledged(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                className="mt-0.5 w-4 h-4 rounded cursor-pointer"
+                style={{
+                  borderColor: "var(--border)",
+                  accentColor: "var(--accent)",
+                }}
               />
-              <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors">
+              <span
+                className="text-sm transition-colors"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 I have read and agree to the Terms & Conditions. I consent to my
                 profile, resume, and interview performance being shared with
                 partner companies for job placement purposes.
@@ -261,7 +304,10 @@ export const ConsentModal = React.memo(
           </div>
 
           {/* Footer */}
-          <div className="p-5 border-t border-slate-100 flex items-center gap-3">
+          <div
+            className="p-5 flex items-center gap-3"
+            style={{ borderTop: "1px solid var(--border-subtle)" }}
+          >
             <Button variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
@@ -271,7 +317,7 @@ export const ConsentModal = React.memo(
               isLoading={isLoading}
               className={`flex-1 ${
                 canProceed
-                  ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  ? ""
                   : ""
               }`}
             >

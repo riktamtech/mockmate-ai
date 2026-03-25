@@ -1,0 +1,184 @@
+{
+  "_id": {
+    "$oid": "69c1401b1a66fc6f4f992d0f"
+  },
+  "zinterviewOpeningId": "69b2c5b6da4df1e30d5c01e7",
+  "__v": 0,
+  "coreSkills": [],
+  "createdAt": {
+    "$date": "2026-03-23T13:28:59.424Z"
+  },
+  "description": "",
+  "experience": 0,
+  "interviewMode": "SCENARIO_BASED",
+  "isEnabled": false,
+  "jobRequirementsAndResponsibilities": [
+    "Design and deliver full-stack features, integrate UI, API, and data components.",
+    "Convert ambiguous requirements into technical designs and implementation plans.",
+    "Implement metadata-driven framework and ensure backward compatibility.",
+    "Design data solutions and ensure performance and scalability.",
+    "Implement secure services and ensure strong input validation.",
+    "Contribute to AI capabilities such as document ingestion and vector search.",
+    "Database Schema Design, Serverless architecture, Infrastructure maintenance"
+  ],
+  "jobType": "Full-Time",
+  "languageOfQuestions": "en",
+  "location": "",
+  "maxExperience": 3,
+  "maxQuestions": 10,
+  "minExperience": 0,
+  "mockmateConfig": {
+    "fitnessThreshold": 0,
+    "schedulingMode": "MANUAL",
+    "approvalRequired": false
+  },
+  "orgLogoUrl": "",
+  "orgName": "MockMate",
+  "organizationId": "69a15a47054aa4d7a3b3bedb",
+  "skillsGroup": [
+    {
+      "skillGroupName": "Frontend Technologies",
+      "criteria": 1,
+      "skills": [
+        "React",
+        "Next.js"
+      ],
+      "weight": 2.5,
+      "_id": "69b2c5b6da4df1e30d5c01e8"
+    },
+    {
+      "skillGroupName": "Backend Technologies",
+      "criteria": 1,
+      "skills": [
+        "Node.js",
+        "Fastify",
+        "REST",
+        "GraphQL"
+      ],
+      "weight": 2.5,
+      "_id": "69b2c5b6da4df1e30d5c01e9"
+    },
+    {
+      "skillGroupName": "Data Technologies",
+      "criteria": 2,
+      "skills": [
+        "PostgreSQL",
+        "SQL Server",
+        "MySQL",
+        "MongoDB"
+      ],
+      "weight": 2,
+      "_id": "69b2c5b6da4df1e30d5c01ea"
+    },
+    {
+      "skillGroupName": "Security",
+      "criteria": 1,
+      "skills": [
+        "RBAC",
+        "Azure AD B2C",
+        "JWT",
+        "Tenant Isolation"
+      ],
+      "weight": 2.5,
+      "_id": "69b2c5b6da4df1e30d5c01eb"
+    },
+    {
+      "skillGroupName": "Quality Assurance",
+      "criteria": 1,
+      "skills": [
+        "Shift-left testing",
+        "Unit Testing",
+        "Integration Testing",
+        "CI/CD"
+      ],
+      "weight": 2.5,
+      "_id": "69b2c5b6da4df1e30d5c01ec"
+    },
+    {
+      "skillGroupName": "AI Enablement (Preferred)",
+      "criteria": 3,
+      "skills": [
+        "RAG",
+        "Embeddings",
+        "Vector Search"
+      ],
+      "weight": 1.5,
+      "_id": "69b2c5b6da4df1e30d5c01ed"
+    },
+    {
+      "skillGroupName": "3D Visualization (Preferred)",
+      "criteria": 3,
+      "skills": [
+        "WebGL",
+        "Three.js"
+      ],
+      "weight": 1.5,
+      "_id": "69b2c5b6da4df1e30d5c01ee"
+    }
+  ],
+  "source": "zinterview",
+  "status": true,
+  "syncedAt": {
+    "$date": "2026-03-23T14:51:53.780Z"
+  },
+  "title": "Senior Software Engineer",
+  "totalApplications": 0,
+  "updatedAt": {
+    "$date": "2026-03-23T14:51:53.785Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69c1402a1a66fc6f4f992d1a"
+  },
+  "zinterviewOpeningId": "69b30422da4df1e30d5c0eff",
+  "__v": 0,
+  "coreSkills": [
+    "Strong verbal and written communication skills.",
+    "Ability to identify issues and provide effective solutions.",
+    "Experience managing customer relationships.",
+    "Ability to manage multiple customers and tasks.",
+    "Work closely with sales, support, and product teams."
+  ],
+  "createdAt": {
+    "$date": "2026-03-23T13:29:14.606Z"
+  },
+  "description": "",
+  "experience": 0,
+  "interviewMode": "TRADITIONAL",
+  "isEnabled": true,
+  "jobRequirementsAndResponsibilities": [
+    "Guide new customers through the onboarding process and help them understand the platform or service.",
+    "Build and maintain strong relationships with customers to improve retention.",
+    "Address customer concerns, troubleshoot problems, and coordinate with internal teams to resolve issues.",
+    "Educate customers about product features and best practices.",
+    "Gather customer feedback and share insights with product and management teams.",
+    "Monitor customer engagement and identify opportunities to improve satisfaction.",
+    "Maintain records of customer interactions and generate periodic reports."
+  ],
+  "jobType": "Full-Time",
+  "languageOfQuestions": "en",
+  "location": "",
+  "maxExperience": 3,
+  "maxQuestions": 10,
+  "minExperience": 1,
+  "mockmateConfig": {
+    "fitnessThreshold": 0,
+    "schedulingMode": "MANUAL",
+    "approvalRequired": true
+  },
+  "orgLogoUrl": "",
+  "orgName": "MockMate",
+  "organizationId": "69a15a47054aa4d7a3b3bedb",
+  "skillsGroup": [],
+  "source": "zinterview",
+  "status": true,
+  "syncedAt": {
+    "$date": "2026-03-23T13:29:14.605Z"
+  },
+  "title": "Customer Success Executive",
+  "totalApplications": 0,
+  "updatedAt": {
+    "$date": "2026-03-23T13:29:14.606Z"
+  }
+}

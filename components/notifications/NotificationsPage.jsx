@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Check, CheckCheck, Clock, Briefcase, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { notificationService } from "../../services/notificationService";
+import { BackToDashboardButton } from "../ui/BackToDashboardButton";
 
 const TYPE_ICONS = {
   APPLICATION_SUBMITTED: Briefcase,
@@ -84,24 +85,24 @@ export default function NotificationsPage() {
 
   return (
     <div style={{ padding: "32px 24px", maxWidth: "700px", margin: "0 auto" }}>
+      <div style={{ marginBottom: "24px" }}>
+        <BackToDashboardButton />
+      </div>
+
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <motion.button whileTap={{ scale: 0.9 }} onClick={() => navigate(-1)}
-            style={{ background: "rgba(255,255,255,0.05)", border: "none", borderRadius: "10px", padding: "8px", cursor: "pointer", color: "rgba(255,255,255,0.4)", display: "flex" }}>
-            <ArrowLeft size={18} />
-          </motion.button>
-          <Bell size={22} color="#8B5CF6" />
-          <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 700, color: "#f1f1f4" }}>Notifications</h1>
+          <Bell size={22} style={{ color: "var(--accent)" }} />
+          <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 700, color: "var(--text-primary)" }}>Notifications</h1>
           {unreadCount > 0 && (
-            <span style={{ padding: "2px 10px", borderRadius: "12px", background: "rgba(139,92,246,0.15)", color: "#8B5CF6", fontSize: "12px", fontWeight: 600 }}>
+            <span style={{ padding: "2px 10px", borderRadius: "12px", background: "var(--accent-bg)", color: "var(--accent-text)", fontSize: "12px", fontWeight: 600 }}>
               {unreadCount} unread
             </span>
           )}
         </div>
         {unreadCount > 0 && (
           <motion.button whileTap={{ scale: 0.95 }} onClick={handleMarkAllRead}
-            style={{ background: "none", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", color: "rgba(255,255,255,0.4)", fontSize: "12px", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
+            style={{ background: "none", border: "1px solid var(--border)", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", color: "var(--text-secondary)", fontSize: "12px", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
             <CheckCheck size={14} /> Mark all read
           </motion.button>
         )}
@@ -111,13 +112,13 @@ export default function NotificationsPage() {
       {loading && (
         <div style={{ display: "flex", justifyContent: "center", padding: "60px" }}>
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            style={{ width: "28px", height: "28px", border: "2px solid rgba(139,92,246,0.2)", borderTop: "2px solid #8B5CF6", borderRadius: "50%" }} />
+            style={{ width: "28px", height: "28px", border: "2px solid var(--spinner-track)", borderTop: "2px solid var(--spinner-fill)", borderRadius: "50%" }} />
         </div>
       )}
 
       {/* Empty */}
       {!loading && notifications.length === 0 && (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "rgba(255,255,255,0.25)" }}>
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-muted)" }}>
           <Bell size={40} style={{ marginBottom: "12px", opacity: 0.3 }} />
           <p style={{ margin: 0, fontSize: "14px" }}>No notifications yet</p>
         </div>
@@ -138,8 +139,8 @@ export default function NotificationsPage() {
                   onClick={() => !notification.isRead && handleMarkAsRead(notification._id)}
                   style={{
                     display: "flex", gap: "12px", padding: "14px 16px", borderRadius: "12px",
-                    background: notification.isRead ? "rgba(255,255,255,0.01)" : "rgba(139,92,246,0.04)",
-                    border: notification.isRead ? "1px solid rgba(255,255,255,0.04)" : "1px solid rgba(139,92,246,0.12)",
+                    background: notification.isRead ? "var(--notification-read-bg)" : "var(--notification-unread-bg)",
+                    border: notification.isRead ? "1px solid var(--notification-read-border)" : "1px solid var(--notification-unread-border)",
                     cursor: notification.isRead ? "default" : "pointer",
                     transition: "all 0.2s",
                   }}>
@@ -152,15 +153,15 @@ export default function NotificationsPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                      <p style={{ margin: 0, fontSize: "13px", fontWeight: notification.isRead ? 400 : 600, color: notification.isRead ? "rgba(255,255,255,0.5)" : "#f1f1f4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <p style={{ margin: 0, fontSize: "13px", fontWeight: notification.isRead ? 400 : 600, color: notification.isRead ? "var(--text-secondary)" : "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {notification.title}
                       </p>
-                      {!notification.isRead && <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#8B5CF6", flexShrink: 0 }} />}
+                      {!notification.isRead && <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--accent)", flexShrink: 0 }} />}
                     </div>
-                    <p style={{ margin: "3px 0 0", fontSize: "12px", color: "rgba(255,255,255,0.35)", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                    <p style={{ margin: "3px 0 0", fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                       {notification.body}
                     </p>
-                    <p style={{ margin: "4px 0 0", fontSize: "10px", color: "rgba(255,255,255,0.2)" }}>
+                    <p style={{ margin: "4px 0 0", fontSize: "10px", color: "var(--text-muted)" }}>
                       {timeAgo(notification.createdAt)}
                     </p>
                   </div>
@@ -175,7 +176,7 @@ export default function NotificationsPage() {
           {loadingMore && (
             <div style={{ display: "flex", justifyContent: "center", padding: "16px" }}>
               <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                style={{ width: "20px", height: "20px", border: "2px solid rgba(139,92,246,0.2)", borderTop: "2px solid #8B5CF6", borderRadius: "50%" }} />
+                style={{ width: "20px", height: "20px", border: "2px solid var(--spinner-track)", borderTop: "2px solid var(--spinner-fill)", borderRadius: "50%" }} />
             </div>
           )}
         </div>

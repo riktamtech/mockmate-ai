@@ -48,6 +48,9 @@ const syncJobOpening = async (req, res) => {
             isEnabled: true,
             source: "zinterview",
             syncedAt: new Date(),
+            // Clear cached JD so it's regenerated on next fitness calculation
+            formattedJobDescription: "",
+            jdContentHash: "",
             mockmateConfig: {
               fitnessThreshold:
                 opening.mockmateConfig?.fitnessThreshold || 0,

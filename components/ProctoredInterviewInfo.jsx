@@ -25,8 +25,7 @@ import {
 import { Button } from "./ui/Button";
 import { ConsentModal } from "./ConsentModal";
 import { useProctoredInterview } from "../hooks/useProctoredInterview";
-import { DashboardHeader } from "./Dashboard";
-import { SideDrawer } from "./SideDrawer";
+import { BackToDashboardButton } from './ui/BackToDashboardButton';
 
 const BENEFITS = [
   {
@@ -159,7 +158,6 @@ export const ProctoredInterviewInfo = () => {
   const [ackChecked, setAckChecked] = useState(false);
   const [showConsent, setShowConsent] = useState(false);
   const [showStartOver, setShowStartOver] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleProceed = useCallback(() => {
     if (!ackChecked) return;
@@ -205,7 +203,7 @@ export const ProctoredInterviewInfo = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div>
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
           <p className="text-slate-500 text-sm">Loading...</p>
@@ -215,21 +213,9 @@ export const ProctoredInterviewInfo = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 relative">
-      <SideDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-      />
-      <DashboardHeader onMenuClick={() => setIsDrawerOpen(true)} />
-
-      <div className="max-w-4xl mx-auto p-6 md:p-8 space-y-8 pb-24">
-        {/* Back button */}
-        <button
-          onClick={() => navigate("/mockmate/candidate/dashboard")}
-          className="flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors text-sm"
-        >
-          <ArrowLeft size={16} /> Back to Dashboard
-        </button>
+    <>
+      <div className="max-w-4xl mx-auto space-y-8 pb-12">
+        <BackToDashboardButton />
 
         {/* Resume banner */}
         {hasExistingInterview &&
@@ -715,6 +701,6 @@ export const ProctoredInterviewInfo = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };

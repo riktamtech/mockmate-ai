@@ -17,13 +17,13 @@ import { ProfileSetup } from "./components/ProfileSetup";
 import { UserProfile } from "./components/UserProfile";
 import { AppState } from "./types";
 import { Code2, ArrowRight } from "lucide-react";
-import { SideDrawer } from "./components/SideDrawer";
-import { MenuButton } from "./components/MenuButton";
 import { api } from "./services/api";
 import { ForgotPassword } from "./components/ForgotPassword";
 import { ResetPassword } from "./components/ResetPassword";
+import { useThemeStore } from "./store/useThemeStore";
+import AppLayout from "./components/layout/AppLayout";
 
-// Lazy-loaded proctored interview components
+// Lazy-loaded components
 const ProctoredInterviewInfo = React.lazy(() =>
   import("./components/ProctoredInterviewInfo").then((m) => ({
     default: m.ProctoredInterviewInfo,
@@ -55,32 +55,65 @@ const NotificationsPage = React.lazy(
   () => import("./components/notifications/NotificationsPage"),
 );
 
-const LazyFallback = () => (
-  <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-    <div className="flex flex-col items-center gap-3">
-      <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-      <p className="text-slate-500 text-sm">Loading...</p>
+const LazyFallback = () => {
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center theme-transition"
+      style={{ background: "var(--bg-base)" }}
+    >
+      <div className="flex flex-col items-center gap-3">
+        <div
+          className="w-10 h-10 rounded-full animate-spin"
+          style={{
+            border: "4px solid var(--border)",
+            borderTopColor: "var(--accent)",
+          }}
+        />
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          Loading...
+        </p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const LandingPage = () => {
   const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 text-center p-6">
-      <div className="p-4 bg-white rounded-2xl shadow-lg mb-6">
-        <Code2 size={48} className="text-blue-600" />
+    <div
+      className="min-h-screen flex flex-col items-center justify-center text-center p-6 theme-transition"
+      style={{ background: "var(--bg-base-gradient)" }}
+    >
+      <div
+        className="p-4 rounded-2xl mb-6"
+        style={{
+          background: "var(--accent-gradient)",
+          boxShadow: "var(--shadow-lg)",
+        }}
+      >
+        <Code2 size={48} className="text-white" />
       </div>
-      <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+      <h1
+        className="text-4xl md:text-5xl font-bold mb-4"
+        style={{ color: "var(--text-primary)" }}
+      >
         Zi MockMate
       </h1>
-      <p className="text-lg text-slate-600 max-w-2xl mb-8">
+      <p
+        className="text-lg max-w-2xl mb-8"
+        style={{ color: "var(--text-secondary)" }}
+      >
         Master your interviews with AI-driven mock sessions, resume analysis,
         and real-time feedback.
       </p>
       <button
         onClick={() => navigate("/mockmate/login")}
-        className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
+        className="text-white px-8 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all hover:scale-105"
+        style={{
+          background: "var(--accent-gradient)",
+          boxShadow: "0 4px 16px rgba(124, 58, 237, 0.3)",
+        }}
       >
         Get Started <ArrowRight size={20} />
       </button>
@@ -121,11 +154,14 @@ const ProtectedAdminRoute = ({ children }) => {
   return <>{children}</>;
 };
 
+/**
+ * DashboardWrapper — Connects Dashboard to navigation actions.
+ * Now uses AppLayout (no embedded header/drawer).
+ */
 const DashboardWrapper = () => {
   const navigate = useNavigate();
   const { setAppState, setActiveInterviewId, setFeedbackData, resetSession } =
     useAppStore();
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
 
   const handleStartNew = () => {
     resetSession();
@@ -159,45 +195,20 @@ const DashboardWrapper = () => {
   };
 
   return (
-    <div className="relative min-h-screen bg-slate-50">
-      <SideDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-      />
-      <Dashboard
-        onStartNew={handleStartNew}
-        onResume={handleResume}
-        onViewReport={handleViewReport}
-        onMenuClick={() => setIsDrawerOpen(true)}
-        onSelectMode={handleSelectMode}
-      />
-    </div>
-  );
-};
-
-/**
- * PageWithDrawer — Reusable dark-bg wrapper with SideDrawer + MenuButton.
- * Used for jobs, events, analytics, notifications pages.
- */
-const PageWithDrawer = ({ children }) => {
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
-
-  return (
-    <div className="relative min-h-screen" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}>
-      <SideDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
-      <MenuButton onClick={() => setIsDrawerOpen(true)} />
-      {children}
-    </div>
+    <Dashboard
+      onStartNew={handleStartNew}
+      onResume={handleResume}
+      onViewReport={handleViewReport}
+      onSelectMode={handleSelectMode}
+    />
   );
 };
 
 export default function App() {
   const { setUser, setAuthLoading } = useAppStore();
-  // Verify auth token on initial load
   const initialMeFetchDone = useRef(false);
 
   useEffect(() => {
-    // If we have already initiated the fetch, do nothing to avoid interfering
     if (initialMeFetchDone.current) return;
 
     const token = localStorage.getItem("token");
@@ -265,12 +276,17 @@ export default function App() {
           element={<ResetPassword />}
         />
 
-        {/* Candidate Routes */}
+        {/* ═══════════════════════════════════════════════════
+            Pages WITH AppLayout (sidebar + header)
+            ═══════════════════════════════════════════════════ */}
+
         <Route
           path="/mockmate/candidate/dashboard"
           element={
             <ProtectedCandidateRoute>
-              <DashboardWrapper />
+              <AppLayout>
+                <DashboardWrapper />
+              </AppLayout>
             </ProtectedCandidateRoute>
           }
         />
@@ -279,7 +295,9 @@ export default function App() {
           path="/mockmate/candidate/profile-setup"
           element={
             <ProtectedCandidateRoute>
-              <ProfileSetup />
+              <AppLayout>
+                <ProfileSetup />
+              </AppLayout>
             </ProtectedCandidateRoute>
           }
         />
@@ -288,10 +306,106 @@ export default function App() {
           path="/mockmate/candidate/profile"
           element={
             <ProtectedCandidateRoute>
-              <UserProfile />
+              <AppLayout>
+                <UserProfile />
+              </AppLayout>
             </ProtectedCandidateRoute>
           }
         />
+
+        <Route
+          path="/mockmate/candidate/report"
+          element={
+            <ProtectedCandidateRoute>
+              <AppLayout>
+                <ReportView />
+              </AppLayout>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        <Route
+          path="/mockmate/candidate/proctored-interview"
+          element={
+            <ProtectedCandidateRoute>
+              <AppLayout>
+                <Suspense fallback={<LazyFallback />}>
+                  <ProctoredInterviewInfo />
+                </Suspense>
+              </AppLayout>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        <Route
+          path="/mockmate/candidate/proctored-interview/report"
+          element={
+            <ProtectedCandidateRoute>
+              <AppLayout>
+                <Suspense fallback={<LazyFallback />}>
+                  <ProctoredReport />
+                </Suspense>
+              </AppLayout>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        <Route
+          path="/mockmate/candidate/jobs"
+          element={
+            <ProtectedCandidateRoute>
+              <AppLayout>
+                <Suspense fallback={<LazyFallback />}>
+                  <JobOpeningsPage />
+                </Suspense>
+              </AppLayout>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        <Route
+          path="/mockmate/candidate/events"
+          element={
+            <ProtectedCandidateRoute>
+              <AppLayout>
+                <Suspense fallback={<LazyFallback />}>
+                  <EventsPage />
+                </Suspense>
+              </AppLayout>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        <Route
+          path="/mockmate/candidate/analytics"
+          element={
+            <ProtectedCandidateRoute>
+              <AppLayout>
+                <Suspense fallback={<LazyFallback />}>
+                  <JobAnalyticsPage />
+                </Suspense>
+              </AppLayout>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        <Route
+          path="/mockmate/candidate/notifications"
+          element={
+            <ProtectedCandidateRoute>
+              <AppLayout>
+                <Suspense fallback={<LazyFallback />}>
+                  <NotificationsPage />
+                </Suspense>
+              </AppLayout>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        {/* ═══════════════════════════════════════════════════
+            Interview session routes — NO layout (no header/sidebar)
+            so user cannot exit interview abnormally
+            ═══════════════════════════════════════════════════ */}
 
         <Route
           path="/mockmate/candidate/practice"
@@ -303,26 +417,6 @@ export default function App() {
         />
 
         <Route
-          path="/mockmate/candidate/report"
-          element={
-            <ProtectedCandidateRoute>
-              <ReportView />
-            </ProtectedCandidateRoute>
-          }
-        />
-
-        {/* Proctored Interview Routes */}
-        <Route
-          path="/mockmate/candidate/proctored-interview"
-          element={
-            <ProtectedCandidateRoute>
-              <Suspense fallback={<LazyFallback />}>
-                <ProctoredInterviewInfo />
-              </Suspense>
-            </ProtectedCandidateRoute>
-          }
-        />
-        <Route
           path="/mockmate/candidate/proctored-interview/chat"
           element={
             <ProtectedCandidateRoute>
@@ -332,79 +426,18 @@ export default function App() {
             </ProtectedCandidateRoute>
           }
         />
-        <Route
-          path="/mockmate/candidate/proctored-interview/report"
-          element={
-            <ProtectedCandidateRoute>
-              <Suspense fallback={<LazyFallback />}>
-                <ProctoredReport />
-              </Suspense>
-            </ProtectedCandidateRoute>
-          }
-        />
 
-        {/* Job Openings Route */}
-        <Route
-          path="/mockmate/candidate/jobs"
-          element={
-            <ProtectedCandidateRoute>
-              <Suspense fallback={<LazyFallback />}>
-                <PageWithDrawer>
-                  <JobOpeningsPage />
-                </PageWithDrawer>
-              </Suspense>
-            </ProtectedCandidateRoute>
-          }
-        />
+        {/* ═══════════════════════════════════════════════════
+            Admin Routes
+            ═══════════════════════════════════════════════════ */}
 
-        {/* Events Route */}
-        <Route
-          path="/mockmate/candidate/events"
-          element={
-            <ProtectedCandidateRoute>
-              <Suspense fallback={<LazyFallback />}>
-                <PageWithDrawer>
-                  <EventsPage />
-                </PageWithDrawer>
-              </Suspense>
-            </ProtectedCandidateRoute>
-          }
-        />
-
-        {/* Analytics Route */}
-        <Route
-          path="/mockmate/candidate/analytics"
-          element={
-            <ProtectedCandidateRoute>
-              <Suspense fallback={<LazyFallback />}>
-                <PageWithDrawer>
-                  <JobAnalyticsPage />
-                </PageWithDrawer>
-              </Suspense>
-            </ProtectedCandidateRoute>
-          }
-        />
-
-        {/* Notifications Route */}
-        <Route
-          path="/mockmate/candidate/notifications"
-          element={
-            <ProtectedCandidateRoute>
-              <Suspense fallback={<LazyFallback />}>
-                <PageWithDrawer>
-                  <NotificationsPage />
-                </PageWithDrawer>
-              </Suspense>
-            </ProtectedCandidateRoute>
-          }
-        />
-
-        {/* Admin Routes */}
         <Route
           path="/mockmate/admin"
           element={
             <ProtectedAdminRoute>
-              <AdminDashboard />
+              <AppLayout>
+                <AdminDashboard />
+              </AppLayout>
             </ProtectedAdminRoute>
           }
         />
@@ -412,9 +445,11 @@ export default function App() {
           path="/mockmate/admin/proctored-report/:interviewId"
           element={
             <ProtectedAdminRoute>
-              <Suspense fallback={<LazyFallback />}>
-                <AdminProctoredReport />
-              </Suspense>
+              <AppLayout>
+                <Suspense fallback={<LazyFallback />}>
+                  <AdminProctoredReport />
+                </Suspense>
+              </AppLayout>
             </ProtectedAdminRoute>
           }
         />

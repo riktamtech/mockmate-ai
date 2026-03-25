@@ -264,15 +264,19 @@ export const ProctoredInterviewBanner = React.memo(
       return (
         <button
           onClick={handleClick}
-          className={`group relative flex flex-col items-center p-8 bg-white rounded-2xl transition-all shadow-sm text-left overflow-hidden ${
+          className={`group relative flex flex-col items-center p-8 rounded-2xl transition-all text-left overflow-hidden theme-transition ${
             isCompleted
               ? isEvaluationPending
-                ? "hover:bg-indigo-50/50 border border-indigo-200 hover:border-indigo-400 hover:shadow-xl hover:shadow-indigo-500/15"
-                : "hover:bg-emerald-50/50 border border-emerald-200 hover:border-emerald-400 hover:shadow-xl hover:shadow-emerald-500/15"
+                ? "border border-indigo-200 hover:border-indigo-400 hover:shadow-xl hover:shadow-indigo-500/15"
+                : "border border-emerald-200 hover:border-emerald-400 hover:shadow-xl hover:shadow-emerald-500/15"
               : isScheduled
-                ? "hover:bg-orange-50/50 border border-orange-200 hover:border-orange-400 hover:shadow-xl hover:shadow-orange-500/15"
-                : "hover:bg-amber-50/50 border border-amber-200 hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/15"
+                ? "border border-orange-200 hover:border-orange-400 hover:shadow-xl hover:shadow-orange-500/15"
+                : "border border-amber-200 hover:border-amber-400 hover:shadow-xl hover:shadow-amber-500/15"
           } ${className}`}
+          style={{
+            background: "var(--bg-surface)",
+            boxShadow: "var(--shadow-card)",
+          }}
         >
           {/* Shimmer overlay */}
           <div className="absolute inset-0 animate-shimmer opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -323,7 +327,7 @@ export const ProctoredInterviewBanner = React.memo(
               )}
             </div>
           </div>
-          <h3 className="text-xl font-semibold mb-2 text-slate-900 text-center">
+          <h3 className="text-xl font-semibold mb-2 text-center" style={{ color: "var(--text-primary)" }}>
             {isCompleted
               ? isEvaluationPending
                 ? "Evaluating Your Interview 🧠"
@@ -332,7 +336,7 @@ export const ProctoredInterviewBanner = React.memo(
                 ? "Interview Scheduled! ⏰"
                 : "Take a Proctored Interview"}
           </h3>
-          <p className="text-sm text-slate-500 text-center">
+          <p className="text-sm text-center" style={{ color: "var(--text-muted)" }}>
             {isCompleted
               ? isEvaluationPending
                 ? "Your interview is complete. Our AI is analyzing your responses — results will be ready soon."

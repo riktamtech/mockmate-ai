@@ -1484,7 +1484,16 @@ export const ProctoredChatInterface = () => {
                     <input
                       type="date"
                       value={scheduleDate}
-                      min={new Date().toISOString().split("T")[0]}
+                      min={
+                          interview?.opening?.rawPayload?.mockmateConfig?.schedulingTimeFrame?.startDate
+                            ? new Date(Math.max(new Date().getTime(), new Date(interview.opening.rawPayload.mockmateConfig.schedulingTimeFrame.startDate).getTime())).toISOString().split("T")[0]
+                            : new Date().toISOString().split("T")[0]
+                        }
+                      max={
+                        interview?.opening?.rawPayload?.mockmateConfig?.schedulingTimeFrame?.endDate
+                          ? new Date(interview.opening.rawPayload.mockmateConfig.schedulingTimeFrame.endDate).toISOString().split("T")[0]
+                          : undefined
+                      }
                       onChange={(e) => setScheduleDate(e.target.value)}
                       className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
@@ -1756,7 +1765,16 @@ export const ProctoredChatInterface = () => {
                     <input
                       type="date"
                       value={rescheduleDate}
-                      min={new Date().toISOString().split("T")[0]}
+                      min={
+                          interview?.opening?.rawPayload?.mockmateConfig?.schedulingTimeFrame?.startDate
+                            ? new Date(Math.max(new Date().getTime(), new Date(interview.opening.rawPayload.mockmateConfig.schedulingTimeFrame.startDate).getTime())).toISOString().split("T")[0]
+                            : new Date().toISOString().split("T")[0]
+                        }
+                      max={
+                        interview?.opening?.rawPayload?.mockmateConfig?.schedulingTimeFrame?.endDate
+                          ? new Date(interview.opening.rawPayload.mockmateConfig.schedulingTimeFrame.endDate).toISOString().split("T")[0]
+                          : undefined
+                      }
                       onChange={(e) => setRescheduleDate(e.target.value)}
                       className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />

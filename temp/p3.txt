@@ -1,0 +1,27 @@
+I want you to do the following improvements and corrections needed.
+
+1. In the 
+
+ApplicationForm.jsx
+I wanted all the fields data to be pre-filled with the existing details of the user in the database. But as you can see in the first attached image, I got nothing. Also a list of existing resumes(last 5 recently used), including the one uploaded during the registration should be shown in the application form but they are also not showing up. Find the root cause and fit it properly.
+
+2. For the 
+
+ApplicationForm.jsx
+the styling for the input fields looks good but the rest of the form styling is not so attractive. I want you to once have a look at the stylings and UI of the sample forms attached as images with this prompt. Especially have a look at the way of showing resumes. I want you to get inspired from them build a much more attractive, user attention grabbing, highly eye-catching UI fot the Application form.
+
+3. Next regarding the resume summary extraction, job description extraction, etc via AI, I want you to make sure to improve it such that, for a resume, the prompt should be only executed once for extraction and should be saved in the DB for retrieval any time later. Similarly for job description also, AI formatted job description should be saved to every opening. Regarding the Resume summary generation, when the user registers into the platform, we take user's resume. If user provides their resume, then we are extracting data from that using AI. So what I want you to do is to extract the resume Summary for that resume at that time only parallely and save that to the DB. This optimises the process very much because, if the user uses the same resume for applications, we don't need to extract resume Summary again for fitness calculation. Also we save the extra tokens costs.
+
+Note: If there are very long texts like resumeSummary, Job descriptions, etc that need to be stored in the DB, then do not truncate the values if they are too long. Instead compress them using the best compression packages or techniques and also prefer to use any other optimisation techniques if needed here.
+
+ 4. In 
+
+ApplicationForm.jsx
+
+extractTextFromPDF()
+is being used to extract text from the resume and send it to the backend. I don't like this way at all. This has a lot of drawbacks. Even if the file is a pdf or so, it can have images directly in it instead of text. So this gives the empty texts as output taking us in the complete wrong direction. That's why I want you to completely replace this with the best, robust, fastly executed, optimised approach. You can refer to the approach followed for resume analysis during the initial steps of registration into the platform 
+
+ResumeUpload.jsx
+. If there is some much better optimised, less time taking approach then I want you to execute that way. Make sure to store the extracted text also in the DB if you feel that will be good so that we don't need to read the same resume again and again if needed. 
+
+I want you to follow the best practices, best industry standards code, the most optimised ways of approaches, the methods in such a way that the functionality should be executed very fast. 

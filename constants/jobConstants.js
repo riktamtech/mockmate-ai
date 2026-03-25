@@ -79,22 +79,45 @@ export const APPLY_BUTTON_STATE = {
   CLOSED: "CLOSED",
 };
 
-// ── Filter Options ────────────────────────────────────────────
+// ── Quick Filter Pills ───────────────────────────────────────
 
-export const EXPERIENCE_LEVELS = [
-  { value: "0-2", label: "0–2 years" },
-  { value: "2-5", label: "2–5 years" },
-  { value: "5-10", label: "5–10 years" },
-  { value: "10+", label: "10+ years" },
+export const QUICK_FILTER_PILLS = [
+  { key: "all", label: "All", icon: null },
+  { key: "applied", label: "Applied", filterKey: "applied", filterValue: "true" },
+  { key: "needsInterview", label: "Needs Interview", filterKey: "needsInterview", filterValue: "true" },
+  { key: "interviewInProgress", label: "In Progress", filterKey: "interviewInProgress", filterValue: "true" },
+  { key: "interviewCompleted", label: "Completed", filterKey: "interviewCompleted", filterValue: "true" },
 ];
 
+// ── Job Types ─────────────────────────────────────────────────
+
+export const JOB_TYPES = [
+  "Full-Time",
+  "Part-Time",
+  "Contract",
+  "Internship",
+  "Freelance",
+];
+
+// ── Filter Keys ───────────────────────────────────────────────
+
 export const JOB_FILTER_KEYS = {
-  EXPERIENCE: "experience",
   LOCATION: "location",
   ORGANISATION: "organisation",
+  JOB_TYPE: "jobType",
+  MIN_EXP: "minExp",
+  MAX_EXP: "maxExp",
+  SINGLE_EXP: "singleExp",
   APPLIED: "applied",
-  SAVED: "saved",
-  NEEDS_INTERVIEW: "needs_interview",
-  INTERVIEW_IN_PROGRESS: "interview_in_progress",
-  INTERVIEW_COMPLETED: "interview_completed",
+  NEEDS_INTERVIEW: "needsInterview",
+  INTERVIEW_IN_PROGRESS: "interviewInProgress",
+  INTERVIEW_COMPLETED: "interviewCompleted",
+};
+
+// ── Experience Slider Config ──────────────────────────────────
+
+export const EXPERIENCE_SLIDER_CONFIG = {
+  min: 0,
+  max: 30,
+  step: 1,
 };

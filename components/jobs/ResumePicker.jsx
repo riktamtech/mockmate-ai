@@ -11,9 +11,7 @@ import {
 
 /**
  * ResumePicker — Resume selector + uploader with LRU cache display.
- *
- * Shows last 5 resumes with selection, drag-and-drop upload,
- * and file validation.
+ * Fully theme-aware via CSS custom properties.
  */
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -67,7 +65,7 @@ export default function ResumePicker({
           margin: 0,
           fontSize: "13px",
           fontWeight: 600,
-          color: "#f1f1f4",
+          color: "var(--text-primary)",
         }}
       >
         Select Resume
@@ -92,11 +90,11 @@ export default function ResumePicker({
                   padding: "10px 14px",
                   borderRadius: "10px",
                   border: isSelected
-                    ? "1px solid rgba(139, 92, 246, 0.5)"
-                    : "1px solid rgba(255, 255, 255, 0.06)",
+                    ? "1px solid var(--accent)"
+                    : "1px solid var(--border-subtle)",
                   background: isSelected
-                    ? "rgba(139, 92, 246, 0.08)"
-                    : "rgba(255, 255, 255, 0.02)",
+                    ? "var(--accent-bg)"
+                    : "var(--bg-surface)",
                   cursor: "pointer",
                   textAlign: "left",
                   width: "100%",
@@ -109,8 +107,8 @@ export default function ResumePicker({
                     height: "32px",
                     borderRadius: "8px",
                     background: isSelected
-                      ? "rgba(139, 92, 246, 0.15)"
-                      : "rgba(255, 255, 255, 0.04)",
+                      ? "var(--accent-bg)"
+                      : "var(--hover-overlay-medium)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -118,11 +116,11 @@ export default function ResumePicker({
                   }}
                 >
                   {isSelected ? (
-                    <Check size={14} color="#8B5CF6" />
+                    <Check size={14} style={{ color: "var(--accent-text)" }} />
                   ) : (
                     <FileText
                       size={14}
-                      color="rgba(255, 255, 255, 0.3)"
+                      style={{ color: "var(--text-muted)" }}
                     />
                   )}
                 </div>
@@ -133,8 +131,8 @@ export default function ResumePicker({
                       fontSize: "13px",
                       fontWeight: isSelected ? 600 : 400,
                       color: isSelected
-                        ? "#f1f1f4"
-                        : "rgba(255, 255, 255, 0.6)",
+                        ? "var(--text-primary)"
+                        : "var(--text-secondary)",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -146,7 +144,7 @@ export default function ResumePicker({
                     style={{
                       margin: "2px 0 0",
                       fontSize: "11px",
-                      color: "rgba(255, 255, 255, 0.3)",
+                      color: "var(--text-muted)",
                       display: "flex",
                       alignItems: "center",
                       gap: "4px",
@@ -162,8 +160,8 @@ export default function ResumePicker({
                 {resume.isDefault && (
                   <Star
                     size={12}
-                    color="#F59E0B"
-                    fill="#F59E0B"
+                    style={{ color: "var(--warning)" }}
+                    fill="currentColor"
                   />
                 )}
               </motion.button>
@@ -185,10 +183,10 @@ export default function ResumePicker({
           padding: "20px",
           borderRadius: "12px",
           border: dragOver
-            ? "2px dashed rgba(139, 92, 246, 0.5)"
-            : "2px dashed rgba(255, 255, 255, 0.08)",
+            ? "2px dashed var(--accent)"
+            : "2px dashed var(--border-subtle)",
           background: dragOver
-            ? "rgba(139, 92, 246, 0.05)"
+            ? "var(--accent-bg)"
             : "transparent",
           cursor: "pointer",
           display: "flex",
@@ -216,19 +214,19 @@ export default function ResumePicker({
             style={{
               width: "24px",
               height: "24px",
-              border: "2px solid rgba(139, 92, 246, 0.2)",
-              borderTop: "2px solid #8B5CF6",
+              border: "2px solid var(--spinner-track)",
+              borderTop: "2px solid var(--spinner-fill)",
               borderRadius: "50%",
             }}
           />
         ) : (
           <Upload
             size={20}
-            color={
-              dragOver
-                ? "rgba(139, 92, 246, 0.8)"
-                : "rgba(255, 255, 255, 0.3)"
-            }
+            style={{
+              color: dragOver
+                ? "var(--accent-text)"
+                : "var(--text-muted)",
+            }}
           />
         )}
         <p
@@ -236,8 +234,8 @@ export default function ResumePicker({
             margin: 0,
             fontSize: "12px",
             color: dragOver
-              ? "rgba(139, 92, 246, 0.8)"
-              : "rgba(255, 255, 255, 0.35)",
+              ? "var(--accent-text)"
+              : "var(--text-muted)",
             textAlign: "center",
           }}
         >
@@ -249,7 +247,7 @@ export default function ResumePicker({
           style={{
             margin: 0,
             fontSize: "10px",
-            color: "rgba(255, 255, 255, 0.2)",
+            color: "var(--text-muted)",
           }}
         >
           PDF, DOC, DOCX • Max 5MB
@@ -266,10 +264,10 @@ export default function ResumePicker({
             style={{
               margin: 0,
               fontSize: "12px",
-              color: "rgba(239, 68, 68, 0.8)",
+              color: "var(--error)",
               padding: "8px 12px",
               borderRadius: "8px",
-              background: "rgba(239, 68, 68, 0.08)",
+              background: "var(--error-bg)",
             }}
           >
             {error}

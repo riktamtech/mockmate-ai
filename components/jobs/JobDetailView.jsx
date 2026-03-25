@@ -11,18 +11,16 @@ import {
   ExternalLink,
   Users,
   FileText,
+  CheckCircle2,
+  Sparkles,
 } from "lucide-react";
+import VerifiedBadge from "../ui/VerifiedBadge";
 import { jobService } from "../../services/jobService";
 import LifecycleTracker from "./LifecycleTracker";
 
 /**
  * JobDetailView — Slide-in drawer showing full job opening details.
- *
- * Features:
- * - Animated slide-in from right
- * - Full description, skills, requirements
- * - Application status with lifecycle tracker
- * - Apply button with dynamic states
+ * Fully theme-aware via CSS custom properties.
  */
 
 export default function JobDetailView({
@@ -79,7 +77,7 @@ export default function JobDetailView({
       return {
         text: "Apply Now",
         disabled: false,
-        gradient: "linear-gradient(135deg, #8B5CF6, #3B82F6)",
+        gradient: "var(--accent-gradient)",
       };
     }
     switch (applicationStatus) {
@@ -111,12 +109,16 @@ export default function JobDetailView({
         return {
           text: "View Application",
           disabled: false,
-          gradient: "linear-gradient(135deg, #8B5CF6, #3B82F6)",
+          gradient: "var(--accent-gradient)",
         };
     }
   };
 
   const applyConfig = getApplyButtonConfig();
+
+  const coreSkills = job?.coreSkills || [];
+  const groupedSkills = job?.skillsGroup ? job.skillsGroup.flatMap(g => g.skills || []) : [];
+  const allSkills = [...new Set([...coreSkills, ...groupedSkills])];
 
   return (
     <AnimatePresence>
@@ -131,76 +133,95 @@ export default function JobDetailView({
             style={{
               position: "fixed",
               inset: 0,
-              background: "rgba(0, 0, 0, 0.4)",
+              background: "var(--backdrop)",
               backdropFilter: "blur(4px)",
               zIndex: 100,
             }}
           />
 
-          {/* Drawer */}
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            style={{
-              position: "fixed",
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: "520px",
-              maxWidth: "100vw",
-              background: "rgba(18, 18, 30, 0.98)",
-              backdropFilter: "blur(20px)",
-              borderLeft: "1px solid rgba(255, 255, 255, 0.06)",
-              zIndex: 101,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            {/* Header */}
-            <div
+          {/* Modal Container */}
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 101,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+            pointerEvents: "none",
+          }}>
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ type: "spring", damping: 30, stiffness: 350 }}
               style={{
+                width: "100%",
+                maxWidth: "640px",
+                maxHeight: "90vh",
+                background: "var(--bg-surface)",
+                backdropFilter: "blur(20px)",
+                borderRadius: "24px",
+                boxShadow: "0 24px 48px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--border)",
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "16px 24px",
-                borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
+                flexDirection: "column",
+                overflow: "hidden",
+                pointerEvents: "auto",
               }}
             >
-              <span
+              {/* Header */}
+              <div
                 style={{
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  color: "rgba(255, 255, 255, 0.6)",
-                }}
-              >
-                Job Details
-              </span>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={onClose}
-                style={{
-                  background: "rgba(255, 255, 255, 0.05)",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "6px",
-                  cursor: "pointer",
-                  color: "rgba(255, 255, 255, 0.4)",
                   display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "24px 28px 20px",
                 }}
               >
-                <X size={18} />
-              </motion.button>
-            </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontSize: "22px",
+                        fontWeight: 700,
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {job?.title || "Loading..."}
+                    </h2>
+                    {job?.source === "zinterview" && (
+                      <VerifiedBadge />
+                    )}
+                  </div>
+                  <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                    {job?.orgName || "Company"}
+                  </span>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={onClose}
+                  style={{
+                    background: "var(--hover-overlay-medium)",
+                    border: "none",
+                    borderRadius: "12px",
+                    padding: "8px",
+                    cursor: "pointer",
+                    color: "var(--text-muted)",
+                    display: "flex",
+                  }}
+                >
+                  <X size={20} />
+                </motion.button>
+              </div>
 
-            {/* Content */}
+            {/* Content Area */}
             <div
               style={{
                 flex: 1,
                 overflowY: "auto",
-                padding: "24px",
+                padding: "0 28px 24px",
               }}
             >
               {loading && (
@@ -221,8 +242,8 @@ export default function JobDetailView({
                     style={{
                       width: "28px",
                       height: "28px",
-                      border: "3px solid rgba(139, 92, 246, 0.2)",
-                      borderTop: "3px solid #8B5CF6",
+                      border: "3px solid var(--spinner-track)",
+                      borderTop: "3px solid var(--spinner-fill)",
                       borderRadius: "50%",
                     }}
                   />
@@ -234,9 +255,9 @@ export default function JobDetailView({
                   style={{
                     padding: "16px",
                     borderRadius: "12px",
-                    background: "rgba(239, 68, 68, 0.08)",
-                    border: "1px solid rgba(239, 68, 68, 0.2)",
-                    color: "rgba(239, 68, 68, 0.8)",
+                    background: "var(--error-bg)",
+                    border: "1px solid var(--error)",
+                    color: "var(--error)",
                     fontSize: "13px",
                   }}
                 >
@@ -248,165 +269,54 @@ export default function JobDetailView({
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  style={{ display: "flex", flexDirection: "column", gap: "24px" }}
+                  style={{ display: "flex", flexDirection: "column", gap: "28px" }}
                 >
-                  {/* Title section */}
-                  <div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      <h2
-                        style={{
-                          margin: 0,
-                          fontSize: "20px",
-                          fontWeight: 700,
-                          color: "#f1f1f4",
-                          lineHeight: 1.3,
-                        }}
-                      >
-                        {job.title}
-                      </h2>
-                      {job.source === "zinterview" && (
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "3px",
-                            padding: "3px 10px",
-                            borderRadius: "12px",
-                            background: "rgba(16, 185, 129, 0.15)",
-                            border: "1px solid rgba(16, 185, 129, 0.25)",
-                            fontSize: "11px",
-                            fontWeight: 500,
-                            color: "#10B981",
-                          }}
-                        >
-                          <BadgeCheck size={12} />
-                          Verified
-                        </span>
-                      )}
+                  {/* Top Metric Cards */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "10px" }}>
+                    <div style={{ padding: "16px", borderRadius: "16px", background: "var(--bg-inset)", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        <Briefcase size={14} /> Role
+                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>Engineering</div>
                     </div>
-
-                    {/* Org + meta */}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                        flexWrap: "wrap",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "5px",
-                          color: "rgba(255, 255, 255, 0.5)",
-                          fontSize: "13px",
-                        }}
-                      >
-                        <Building2 size={14} />
-                        {job.orgName || "Company"}
-                      </span>
-                      {experienceText && (
-                        <span
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "5px",
-                            color: "rgba(255, 255, 255, 0.4)",
-                            fontSize: "13px",
-                          }}
-                        >
-                          <Briefcase size={14} />
-                          {experienceText}
-                        </span>
-                      )}
-                      {postedDate && (
-                        <span
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "5px",
-                            color: "rgba(255, 255, 255, 0.3)",
-                            fontSize: "12px",
-                          }}
-                        >
-                          <Clock size={12} />
-                          {postedDate}
-                        </span>
-                      )}
+                    <div style={{ padding: "16px", borderRadius: "16px", background: "var(--bg-inset)", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        <Clock size={14} /> Type
+                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>{job.jobType || "Full-time"}</div>
+                    </div>
+                    <div style={{ padding: "16px", borderRadius: "16px", background: "var(--bg-inset)", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        <MapPin size={14} /> Location
+                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>{job.location || "Remote"}</div>
+                    </div>
+                    <div style={{ padding: "16px", borderRadius: "16px", background: "var(--bg-inset)", border: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        <Users size={14} /> Experience
+                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>{experienceText || "Not specified"}</div>
                     </div>
                   </div>
 
-                  {/* Skills */}
-                  {job.coreSkills?.length > 0 && (
-                    <div>
-                      <h4
-                        style={{
-                          margin: "0 0 8px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          color: "rgba(255, 255, 255, 0.4)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.5px",
-                        }}
-                      >
-                        Required Skills
-                      </h4>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "6px",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        {job.coreSkills.map((skill, i) => (
-                          <span
-                            key={i}
-                            style={{
-                              padding: "4px 12px",
-                              borderRadius: "10px",
-                              background: "rgba(139, 92, 246, 0.12)",
-                              border: "1px solid rgba(139, 92, 246, 0.2)",
-                              color: "rgba(167, 139, 250, 0.9)",
-                              fontSize: "12px",
-                              fontWeight: 500,
-                            }}
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Description */}
+                  {/* About the Role */}
                   {job.description && (
                     <div>
                       <h4
                         style={{
-                          margin: "0 0 8px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          color: "rgba(255, 255, 255, 0.4)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.5px",
+                          margin: "0 0 12px",
+                          fontSize: "16px",
+                          fontWeight: 700,
+                          color: "var(--text-primary)",
                         }}
                       >
-                        Description
+                        About the role
                       </h4>
                       <div
                         style={{
-                          color: "rgba(255, 255, 255, 0.6)",
-                          fontSize: "13px",
-                          lineHeight: 1.7,
+                          color: "var(--text-secondary)",
+                          fontSize: "14px",
+                          lineHeight: 1.6,
                           whiteSpace: "pre-wrap",
                         }}
                       >
@@ -415,182 +325,193 @@ export default function JobDetailView({
                     </div>
                   )}
 
-                  {/* Requirements */}
+                  {/* Requirements List */}
                   {job.jobRequirementsAndResponsibilities?.length > 0 && (
                     <div>
                       <h4
                         style={{
-                          margin: "0 0 8px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          color: "rgba(255, 255, 255, 0.4)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.5px",
+                          margin: "0 0 16px",
+                          fontSize: "16px",
+                          fontWeight: 700,
+                          color: "var(--text-primary)",
                         }}
                       >
                         Requirements
                       </h4>
-                      <ul
+                      <div
                         style={{
-                          margin: 0,
-                          padding: "0 0 0 16px",
-                          color: "rgba(255, 255, 255, 0.5)",
-                          fontSize: "13px",
-                          lineHeight: 1.8,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "12px",
                         }}
                       >
                         {job.jobRequirementsAndResponsibilities.map(
                           (req, i) => (
-                            <li key={i}>{req}</li>
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: i * 0.05 }}
+                              style={{
+                                display: "flex",
+                                alignItems: "flex-start",
+                                gap: "10px",
+                              }}
+                            >
+                              <div style={{ marginTop: "3px", color: "var(--success)" }}>
+                                <CheckCircle2 size={16} />
+                              </div>
+                              <span style={{ color: "var(--text-secondary)", fontSize: "14px", lineHeight: 1.5 }}>
+                                {req}
+                              </span>
+                            </motion.div>
                           ),
                         )}
-                      </ul>
+                      </div>
                     </div>
                   )}
 
-                  {/* Interview info */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "12px",
-                    }}
-                  >
-                    <div
+                  {/* Enhanced Skills Section */}
+                  <div>
+                    <h4
                       style={{
-                        padding: "12px",
-                        borderRadius: "10px",
-                        background: "rgba(255, 255, 255, 0.03)",
-                        border: "1px solid rgba(255, 255, 255, 0.06)",
+                        margin: "0 0 16px",
+                        fontSize: "16px",
+                        fontWeight: 700,
+                        color: "var(--text-primary)",
                       }}
                     >
-                      <p
-                        style={{
-                          margin: 0,
-                          color: "rgba(255, 255, 255, 0.3)",
-                          fontSize: "11px",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        Interview Type
-                      </p>
-                      <p
-                        style={{
-                          margin: 0,
-                          color: "#f1f1f4",
-                          fontSize: "13px",
-                          fontWeight: 500,
-                        }}
-                      >
-                        {job.interviewMode || "AI Interview"}
-                      </p>
-                    </div>
+                      Skills & Technologies
+                    </h4>
                     <div
                       style={{
-                        padding: "12px",
-                        borderRadius: "10px",
-                        background: "rgba(255, 255, 255, 0.03)",
-                        border: "1px solid rgba(255, 255, 255, 0.06)",
+                        display: "flex",
+                        gap: "10px",
+                        flexWrap: "wrap",
                       }}
                     >
-                      <p
-                        style={{
-                          margin: 0,
-                          color: "rgba(255, 255, 255, 0.3)",
-                          fontSize: "11px",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        Questions
-                      </p>
-                      <p
-                        style={{
-                          margin: 0,
-                          color: "#f1f1f4",
+                      {allSkills.map((skill, i) => (
+                        <motion.span
+                          key={i}
+                          whileHover={{ scale: 1.05, y: -2 }}
+                          style={{
+                            padding: "6px 16px",
+                            borderRadius: "20px",
+                            background: "var(--accent-bg)",
+                            border: "1px solid var(--accent-bg-hover)",
+                            color: "var(--accent-text)",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            backdropFilter: "blur(8px)",
+                            boxShadow: "0 4px 12px var(--accent-bg-hover)",
+                          }}
+                        >
+                          {skill}
+                        </motion.span>
+                      ))}
+                      {allSkills.length === 0 && (
+                        <div style={{
+                          color: "var(--text-muted)",
                           fontSize: "13px",
-                          fontWeight: 500,
-                        }}
-                      >
-                        {job.maxQuestions || "—"} questions
-                      </p>
+                          fontStyle: "italic",
+                          padding: "16px",
+                          background: "var(--bg-inset)",
+                          borderRadius: "16px",
+                          width: "100%",
+                          textAlign: "center",
+                          border: "1px dashed var(--border-subtle)"
+                        }}>
+                          No specific skills mentioned for this role
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {/* Application Status */}
-                  {hasApplied && (
-                    <div>
-                      <h4
-                        style={{
-                          margin: "0 0 8px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          color: "rgba(255, 255, 255, 0.4)",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.5px",
-                        }}
-                      >
-                        Application Status
-                      </h4>
-                      <LifecycleTracker
-                        currentStage={applicationStatus}
-                        lifecycleHistory={
-                          job.applicationStatus?.lifecycleHistory || []
-                        }
-                      />
-                    </div>
-                  )}
                 </motion.div>
               )}
             </div>
 
-            {/* Footer with Apply button */}
+            {/* Footer */}
             {job && !loading && (
               <div
                 style={{
-                  padding: "16px 24px",
-                  borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+                  padding: "20px 28px",
+                  borderTop: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "var(--bg-surface)",
                 }}
               >
-                <motion.button
-                  whileHover={
-                    !applyConfig.disabled ? { scale: 1.02 } : {}
-                  }
-                  whileTap={
-                    !applyConfig.disabled ? { scale: 0.98 } : {}
-                  }
-                  onClick={() => {
-                    if (!applyConfig.disabled) {
-                      onApply?.(job);
-                    }
-                  }}
-                  disabled={applyConfig.disabled}
-                  style={{
-                    width: "100%",
-                    padding: "14px",
-                    borderRadius: "12px",
-                    background: applyConfig.gradient,
-                    border: "none",
-                    color: "#fff",
-                    fontSize: "15px",
-                    fontWeight: 600,
-                    cursor: applyConfig.disabled
-                      ? "not-allowed"
-                      : "pointer",
-                    opacity: applyConfig.disabled ? 0.6 : 1,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                  }}
-                >
-                  {applyConfig.text}
-                  {!applyConfig.disabled && (
-                    <ChevronRight size={18} />
-                  )}
-                </motion.button>
+                {/* Resume Match Info */}
+                {job.applicationStatus?.fitnessScore != null ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ padding: "8px", background: "var(--success-bg)", color: "var(--success)", borderRadius: "10px" }}>
+                      <Sparkles size={16} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: "14px", color: "var(--text-primary)" }}>
+                        {job.applicationStatus.fitnessScore}% Match
+                      </div>
+                      <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        Based on your profile
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div /> /* Empty div for flex space-between if no match info */
+                )}
+
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <motion.button
+                    whileHover={{ backgroundColor: "var(--hover-overlay-medium)" }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={onClose}
+                    style={{
+                      padding: "12px 20px",
+                      borderRadius: "12px",
+                      background: "transparent",
+                      border: "none",
+                      color: "var(--text-primary)",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    whileHover={!applyConfig.disabled ? { scale: 1.02, boxShadow: "0 8px 16px rgba(124, 58, 237, 0.3)" } : {}}
+                    whileTap={!applyConfig.disabled ? { scale: 0.98 } : {}}
+                    onClick={() => {
+                      if (!applyConfig.disabled) {
+                        onApply?.(job);
+                      }
+                    }}
+                    disabled={applyConfig.disabled}
+                    style={{
+                      padding: "12px 32px",
+                      borderRadius: "12px",
+                      background: applyConfig.gradient,
+                      border: "none",
+                      color: "#fff",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      cursor: applyConfig.disabled ? "not-allowed" : "pointer",
+                      opacity: applyConfig.disabled ? 0.6 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    {applyConfig.text}
+                    {!applyConfig.disabled && <ChevronRight size={18} />}
+                  </motion.button>
+                </div>
               </div>
             )}
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

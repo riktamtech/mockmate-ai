@@ -4,7 +4,7 @@ import { axiosInstance } from "./api";
  * Job Service — API client for job openings feature.
  *
  * Handles all API calls related to job openings, applications,
- * fitness scoring, and candidate profiles.
+ * fitness scoring, candidate profiles, and meta lookups.
  */
 
 export const jobService = {
@@ -17,17 +17,31 @@ export const jobService = {
     cursor = null,
     limit = 20,
     search = "",
-    experience = "",
+    minExp = "",
+    maxExp = "",
+    singleExp = "",
     location = "",
     organisation = "",
+    jobType = "",
+    applied = "",
+    needsInterview = "",
+    interviewInProgress = "",
+    interviewCompleted = "",
     sort = "newest",
   } = {}) => {
     const params = { limit, sort };
     if (cursor) params.cursor = cursor;
     if (search) params.search = search;
-    if (experience) params.experience = experience;
+    if (minExp !== "" && minExp !== null) params.minExp = minExp;
+    if (maxExp !== "" && maxExp !== null) params.maxExp = maxExp;
+    if (singleExp !== "" && singleExp !== null) params.singleExp = singleExp;
     if (location) params.location = location;
     if (organisation) params.organisation = organisation;
+    if (jobType) params.jobType = jobType;
+    if (applied === "true") params.applied = "true";
+    if (needsInterview === "true") params.needsInterview = "true";
+    if (interviewInProgress === "true") params.interviewInProgress = "true";
+    if (interviewCompleted === "true") params.interviewCompleted = "true";
 
     const { data } = await axiosInstance.get("/api/jobs", { params });
     return data;
@@ -46,6 +60,60 @@ export const jobService = {
    */
   getApplyStatus: async (id) => {
     const { data } = await axiosInstance.get(`/api/jobs/${id}/apply-status`);
+    return data;
+  },
+
+  // ── Meta / Lookups ──────────────────────────────────────────
+
+  /**
+   * Fetch all organisation names.
+   */
+  getOrganisations: async () => {
+    const { data } = await axiosInstance.get("/api/jobs/meta/organisations");
+    return data;
+  },
+
+  /**
+   * Fetch distinct locations from job openings.
+   */
+  getLocations: async () => {
+    const { data } = await axiosInstance.get("/api/jobs/meta/locations");
+    return data;
+  },
+
+  /**
+   * Fetch distinct job types.
+   */
+  getJobTypes: async () => {
+    const { data } = await axiosInstance.get("/api/jobs/meta/job-types");
+    return data;
+  },
+
+  /**
+   * Fetch all countries for location dropdown.
+   */
+  getCountries: async () => {
+    const { data } = await axiosInstance.get("/api/jobs/meta/countries");
+    return data;
+  },
+
+  /**
+   * Fetch states for a given country.
+   */
+  getStates: async (countryCode) => {
+    const { data } = await axiosInstance.get("/api/jobs/meta/states", {
+      params: { countryCode },
+    });
+    return data;
+  },
+
+  /**
+   * Fetch cities for a given state.
+   */
+  getCities: async (countryCode, stateCode) => {
+    const { data } = await axiosInstance.get("/api/jobs/meta/cities", {
+      params: { countryCode, stateCode },
+    });
     return data;
   },
 
@@ -89,43 +157,84 @@ export const jobService = {
     return data;
   },
 
-  // ── Candidate Profile ───────────────────────────────────────
+  // ── Full Application Flow (OBJ-5) ────────────────────────────
 
   /**
-   * Get candidate profile (pre-fill data).
+   * Phase 1: Submit form + calculate fitness score.
    */
-  getCandidateProfile: async () => {
-    const { data } = await axiosInstance.get("/api/jobs/profile");
+  submitFullApplication: async (openingId, applicationData) => {
+    const { data } = await axiosInstance.post(
+      "/api/applications/submit-full",
+      { openingId, ...applicationData },
+    );
     return data;
   },
 
   /**
-   * Save/update candidate profile.
+   * Phase 2: Finalize after reviewing score.
    */
+  finalizeApplication: async (openingId, finalData) => {
+    const { data } = await axiosInstance.post(
+      "/api/applications/finalize",
+      { openingId, ...finalData },
+    );
+    return data;
+  },
+
+  /**
+   * Get stored fitness score for an opening.
+   */
+  getStoredFitnessScore: async (openingId) => {
+    const { data } = await axiosInstance.get(
+      `/api/fitness/stored/${openingId}`,
+    );
+    return data;
+  },
+
+  // ── Candidate Profile ───────────────────────────────────────
+
+  getCandidateProfile: async () => {
+    const { data } = await axiosInstance.get("/api/applications/profile/me");
+    return data;
+  },
+
   saveCandidateProfile: async (profileData) => {
-    const { data } = await axiosInstance.put("/api/jobs/profile", profileData);
+    const { data } = await axiosInstance.put(
+      "/api/applications/profile/me",
+      profileData,
+    );
     return data;
   },
 
   // ── Resumes ─────────────────────────────────────────────────
 
-  /**
-   * Get cached resumes for the current user.
-   */
   getCachedResumes: async () => {
-    const { data } = await axiosInstance.get("/api/jobs/resumes");
+    const { data } = await axiosInstance.get("/api/applications/resumes/cached");
     return data;
   },
 
-  /**
-   * Upload a new resume for job applications.
-   */
   uploadResume: async (file) => {
     const formData = new FormData();
     formData.append("resume", file);
     const { data } = await axiosInstance.post("/api/jobs/resumes", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
+    return data;
+  },
+
+  /**
+   * Upload a resume for application flow.
+   * Server extracts text via Gemini Vision, generates summary, and caches.
+   * Returns { resumeId, fileName, extractedText, resumeS3Key }.
+   */
+  uploadApplicationResume: async (file) => {
+    const formData = new FormData();
+    formData.append("resume", file);
+    const { data } = await axiosInstance.post(
+      "/api/applications/resumes/upload",
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
     return data;
   },
 };

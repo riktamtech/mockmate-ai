@@ -26,6 +26,10 @@ const mockmateConfigSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    schedulingTimeFrame: {
+      startDate: { type: Date },
+      endDate: { type: Date },
+    },
   },
   { _id: false },
 );
@@ -89,6 +93,11 @@ const jobOpeningSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    jobType: {
+      type: String,
+      default: "Full-Time",
+      enum: ["Full-Time", "Part-Time", "Contract", "Internship", "Freelance", ""],
+    },
     interviewMode: {
       type: String,
       default: "TRADITIONAL",
@@ -125,6 +134,17 @@ const jobOpeningSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // Cached formatted job description for fitness scoring
+    formattedJobDescription: {
+      type: String,
+      default: "",
+    },
+    // SHA-256 hash of JD-relevant fields for update detection
+    jdContentHash: {
+      type: String,
+      default: "",
+    },
+
     // Candidate stats (denormalized for performance)
     totalApplications: {
       type: Number,

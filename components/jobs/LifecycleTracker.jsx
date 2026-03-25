@@ -5,8 +5,10 @@ import { LIFECYCLE_STAGES } from "../../constants/jobConstants";
 /**
  * LifecycleTracker — Visual step-by-step progress indicator
  * for job application status.
+ * Theme-aware via CSS custom properties.
  *
- * Shows animated transitions between lifecycle stages.
+ * Note: Status colors (#10B981 completed, accent for current) are semantic
+ * data indicators and intentionally remain static.
  */
 
 function getStageStatus(stageKey, currentStage, history) {
@@ -15,7 +17,6 @@ function getStageStatus(stageKey, currentStage, history) {
     (s) => s.key === currentStage,
   );
 
-  // Check if this stage exists in history
   const historyEntry = history?.find((h) => h.stage === stageKey);
 
   if (historyEntry) return "completed";
@@ -43,12 +44,12 @@ function StageIcon({ status }) {
         animate={{ scale: [1, 1.15, 1] }}
         transition={{ duration: 1.5, repeat: Infinity }}
       >
-        <Loader2 size={20} color="#8B5CF6" className="animate-spin" />
+        <Loader2 size={20} style={{ color: "var(--accent)" }} className="animate-spin" />
       </motion.div>
     );
   }
 
-  return <Circle size={20} color="rgba(255, 255, 255, 0.2)" />;
+  return <Circle size={20} style={{ color: "var(--text-muted)" }} />;
 }
 
 export default function LifecycleTracker({
@@ -73,7 +74,6 @@ export default function LifecycleTracker({
         );
 
         if (compact) {
-          // Compact: horizontal dots
           return (
             <motion.div
               key={stage.key}
@@ -94,8 +94,8 @@ export default function LifecycleTracker({
                     status === "completed"
                       ? "#10B981"
                       : status === "current"
-                        ? "#8B5CF6"
-                        : "rgba(255, 255, 255, 0.15)",
+                        ? "var(--accent)"
+                        : "var(--border-subtle)",
                   transition: "all 0.3s ease",
                 }}
               />
@@ -107,7 +107,7 @@ export default function LifecycleTracker({
                     background:
                       status === "completed"
                         ? "#10B981"
-                        : "rgba(255, 255, 255, 0.1)",
+                        : "var(--border-subtle)",
                     borderRadius: "1px",
                   }}
                 />
@@ -116,10 +116,8 @@ export default function LifecycleTracker({
           );
         }
 
-        // Full: vertical with labels
         return (
           <div key={stage.key} style={{ display: "flex", gap: "12px" }}>
-            {/* Left: icon + connector line */}
             <div
               style={{
                 display: "flex",
@@ -137,7 +135,7 @@ export default function LifecycleTracker({
                     background:
                       status === "completed"
                         ? "linear-gradient(to bottom, #10B981, rgba(16, 185, 129, 0.3))"
-                        : "rgba(255, 255, 255, 0.08)",
+                        : "var(--border-subtle)",
                     borderRadius: "1px",
                     margin: "4px 0",
                   }}
@@ -145,7 +143,6 @@ export default function LifecycleTracker({
               )}
             </div>
 
-            {/* Right: label + timestamp */}
             <div style={{ paddingBottom: "16px", flex: 1 }}>
               <p
                 style={{
@@ -156,8 +153,8 @@ export default function LifecycleTracker({
                     status === "completed"
                       ? "#10B981"
                       : status === "current"
-                        ? "#f1f1f4"
-                        : "rgba(255, 255, 255, 0.3)",
+                        ? "var(--text-primary)"
+                        : "var(--text-muted)",
                   lineHeight: 1.4,
                 }}
               >
@@ -169,7 +166,7 @@ export default function LifecycleTracker({
                   style={{
                     margin: "2px 0 0 0",
                     fontSize: "11px",
-                    color: "rgba(255, 255, 255, 0.3)",
+                    color: "var(--text-muted)",
                     display: "flex",
                     alignItems: "center",
                     gap: "4px",

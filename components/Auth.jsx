@@ -4,6 +4,7 @@ import { api } from "../services/api";
 import { Code2, Mail, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "../store/useAppStore";
+import { useThemeStore } from "../store/useThemeStore";
 
 export const Auth = ({ onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -19,6 +20,8 @@ export const Auth = ({ onLoginSuccess }) => {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const navigate = useNavigate();
   const user = useAppStore((s) => s.user);
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = theme === "dark";
 
   useEffect(() => {
     let isMounted = true;
@@ -69,7 +72,7 @@ export const Auth = ({ onLoginSuccess }) => {
         const parentDiv = document.getElementById("googleSignInDiv");
         if (parentDiv) {
           window.google.accounts.id.renderButton(parentDiv, {
-            theme: "outline",
+            theme: isDark ? "filled_black" : "outline",
             size: "large",
             width: parentDiv?.offsetWidth || 350,
           });
@@ -126,10 +129,19 @@ export const Auth = ({ onLoginSuccess }) => {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div
+        className="min-h-screen flex items-center justify-center theme-transition"
+        style={{ background: "var(--bg-base)" }}
+      >
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-          <p className="text-slate-500">Checking authentication...</p>
+          <div
+            className="w-12 h-12 rounded-full animate-spin"
+            style={{
+              border: "4px solid var(--border)",
+              borderTopColor: "var(--accent)",
+            }}
+          />
+          <p style={{ color: "var(--text-muted)" }}>Checking authentication...</p>
         </div>
       </div>
     );
@@ -211,40 +223,73 @@ export const Auth = ({ onLoginSuccess }) => {
     setPendingUserData(null);
   };
 
+  /* ── Shared card style ── */
+  const cardStyle = {
+    background: "var(--bg-surface)",
+    border: "1px solid var(--border)",
+    boxShadow: "var(--shadow-lg)",
+  };
+
+  const inputStyle = {
+    background: "var(--bg-inset)",
+    color: "var(--text-primary)",
+    border: "1px solid var(--border)",
+  };
+
   if (showOtpScreen) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+      <div
+        className="min-h-screen flex items-center justify-center p-4 theme-transition"
+        style={{ background: "var(--bg-base)" }}
+      >
+        <div className="max-w-md w-full rounded-2xl p-8" style={cardStyle}>
           <button
             onClick={handleBackToRegister}
-            className="flex items-center text-slate-500 hover:text-slate-700 mb-6"
+            className="flex items-center mb-6 transition-colors"
+            style={{ color: "var(--text-muted)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
           >
             <ArrowLeft size={18} className="mr-1" /> Back
           </button>
 
           <div className="flex flex-col items-center mb-8">
-            <div className="p-3 bg-emerald-50 rounded-xl mb-4 text-emerald-600">
+            <div
+              className="p-3 rounded-xl mb-4"
+              style={{ background: "var(--success-bg)", color: "var(--success)" }}
+            >
               <Mail size={32} />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1
+              className="text-2xl font-bold"
+              style={{ color: "var(--text-primary)" }}
+            >
               Verify Your Email
             </h1>
-            <p className="text-slate-500 text-center mt-2">
+            <p className="text-center mt-2" style={{ color: "var(--text-muted)" }}>
               We've sent a 6-digit code to
               <br />
-              <span className="font-medium text-slate-700">{email}</span>
+              <span className="font-medium" style={{ color: "var(--text-secondary)" }}>
+                {email}
+              </span>
             </p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+            <div
+              className="mb-4 p-3 rounded-lg text-sm"
+              style={{ background: "var(--error-bg)", color: "var(--error)" }}
+            >
               {error}
             </div>
           )}
 
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label
+                className="block text-sm font-medium mb-1"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 Enter OTP
               </label>
               <input
@@ -253,7 +298,11 @@ export const Auth = ({ onLoginSuccess }) => {
                 onChange={(e) =>
                   setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
                 }
-                className="w-full p-3 text-center text-2xl tracking-widest border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full p-3 text-center text-2xl tracking-widest rounded-lg focus:ring-2 focus:ring-offset-0 outline-none transition-colors"
+                style={{
+                  ...inputStyle,
+                  focusRingColor: "var(--focus-ring)",
+                }}
                 placeholder="000000"
                 maxLength={6}
                 required
@@ -271,11 +320,14 @@ export const Auth = ({ onLoginSuccess }) => {
           </form>
 
           <div className="mt-6 text-center text-sm">
-            <span className="text-slate-500">Didn't receive the code? </span>
+            <span style={{ color: "var(--text-muted)" }}>
+              Didn't receive the code?{" "}
+            </span>
             <button
               onClick={handleResendOtp}
               disabled={otpSending}
-              className="text-blue-600 hover:underline disabled:opacity-50"
+              className="hover:underline disabled:opacity-50"
+              style={{ color: "var(--accent)" }}
             >
               {otpSending ? "Sending..." : "Resend OTP"}
             </button>
@@ -286,20 +338,34 @@ export const Auth = ({ onLoginSuccess }) => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-slate-100">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 theme-transition"
+      style={{ background: "var(--bg-base)" }}
+    >
+      <div className="max-w-md w-full rounded-2xl p-8" style={cardStyle}>
         <div className="flex flex-col items-center mb-8">
-          <div className="p-3 bg-blue-50 rounded-xl mb-4 text-blue-600">
+          <div
+            className="p-3 rounded-xl mb-4"
+            style={{ background: "var(--accent-bg)", color: "var(--accent)" }}
+          >
             <Code2 size={32} />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: "var(--text-primary)" }}
+          >
             {isLogin ? "Welcome Back" : "Create Account"}
           </h1>
-          <p className="text-slate-500">Log in to MockMate AI Portal</p>
+          <p style={{ color: "var(--text-muted)" }}>
+            Log in to MockMate AI Portal
+          </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+          <div
+            className="mb-4 p-3 rounded-lg text-sm"
+            style={{ background: "var(--error-bg)", color: "var(--error)" }}
+          >
             {error}
           </div>
         )}
@@ -307,39 +373,51 @@ export const Auth = ({ onLoginSuccess }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label
+                className="block text-sm font-medium mb-1"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 Name
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full p-2 rounded-lg focus:ring-2 outline-none transition-colors"
+                style={inputStyle}
                 required
               />
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label
+              className="block text-sm font-medium mb-1"
+              style={{ color: "var(--text-secondary)" }}
+            >
               Email
             </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full p-2 rounded-lg focus:ring-2 outline-none transition-colors"
+              style={inputStyle}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label
+              className="block text-sm font-medium mb-1"
+              style={{ color: "var(--text-secondary)" }}
+            >
               Password
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full p-2 rounded-lg focus:ring-2 outline-none transition-colors"
+              style={inputStyle}
               required
             />
           </div>
@@ -352,7 +430,8 @@ export const Auth = ({ onLoginSuccess }) => {
             <div className="text-right mt-2">
               <span
                 onClick={() => navigate("/mockmate/forgot-password")}
-                className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer hover:underline"
+                className="text-sm cursor-pointer hover:underline"
+                style={{ color: "var(--accent)" }}
               >
                 Forgot Password?
               </span>
@@ -362,10 +441,19 @@ export const Auth = ({ onLoginSuccess }) => {
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-slate-200"></span>
+            <span
+              className="w-full"
+              style={{ borderTop: "1px solid var(--border)" }}
+            />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-slate-500">
+            <span
+              className="px-2"
+              style={{
+                background: "var(--bg-surface)",
+                color: "var(--text-muted)",
+              }}
+            >
               Or continue with
             </span>
           </div>
@@ -379,7 +467,8 @@ export const Auth = ({ onLoginSuccess }) => {
         <div className="mt-6 text-center text-sm">
           <button
             onClick={() => setIsLogin(!isLogin)}
-            className="text-blue-600 hover:underline"
+            className="hover:underline"
+            style={{ color: "var(--accent)" }}
           >
             {isLogin
               ? "Don't have an account? Sign up"

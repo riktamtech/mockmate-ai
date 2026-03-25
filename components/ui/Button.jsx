@@ -1,5 +1,9 @@
 import React from 'react';
 
+/**
+ * Button — Theme-aware button component.
+ * Uses CSS custom properties for dark mode support.
+ */
 export const Button = ({ 
   children, 
   variant = 'primary', 
@@ -9,13 +13,14 @@ export const Button = ({
   disabled,
   ...props 
 }) => {
-  const baseStyles = "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseStyles = "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
   
   const variants = {
-    primary: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-sm",
-    secondary: "bg-slate-200 text-slate-900 hover:bg-slate-300 focus:ring-slate-500",
-    outline: "border border-slate-300 text-slate-700 hover:bg-slate-50 focus:ring-slate-500 bg-white",
-    danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm",
+    primary: "text-white shadow-sm",
+    secondary: "shadow-sm",
+    outline: "shadow-sm",
+    danger: "text-white shadow-sm",
+    ghost: "",
   };
 
   const sizes = {
@@ -24,10 +29,53 @@ export const Button = ({
     lg: "px-6 py-3 text-lg",
   };
 
+  /* Inline style maps using CSS vars for theme awareness */
+  const variantStyles = {
+    primary: {
+      background: "var(--accent-gradient)",
+      color: "#fff",
+    },
+    secondary: {
+      background: "var(--bg-elevated)",
+      color: "var(--text-primary)",
+      border: "1px solid var(--border)",
+    },
+    outline: {
+      background: "var(--bg-surface)",
+      color: "var(--text-secondary)",
+      border: "1px solid var(--border)",
+    },
+    danger: {
+      background: "var(--error)",
+      color: "#fff",
+    },
+    ghost: {
+      background: "transparent",
+      color: "var(--text-secondary)",
+    },
+  };
+
   return (
     <button
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+      style={variantStyles[variant]}
       disabled={disabled || isLoading}
+      onMouseEnter={(e) => {
+        if (variant === 'outline' || variant === 'ghost') {
+          e.currentTarget.style.background = "var(--hover-overlay-medium)";
+        }
+        if (variant === 'secondary') {
+          e.currentTarget.style.background = "var(--bg-inset)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (variant === 'outline' || variant === 'ghost') {
+          e.currentTarget.style.background = variantStyles[variant].background;
+        }
+        if (variant === 'secondary') {
+          e.currentTarget.style.background = "var(--bg-elevated)";
+        }
+      }}
       {...props}
     >
       {isLoading ? (

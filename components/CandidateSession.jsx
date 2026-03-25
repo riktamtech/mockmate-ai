@@ -19,8 +19,8 @@ import {
 import { speak, stop } from "../services/ttsPlayer";
 import { api } from "../services/api";
 import { useNavigate } from "react-router-dom";
-import { SideDrawer } from "./SideDrawer";
-import { MenuButton } from "./MenuButton";
+import AppSidebar from "./layout/AppSidebar";
+import AppHeader from "./layout/AppHeader";
 import { Loader2 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 
@@ -1365,11 +1365,9 @@ export const CandidateSession = () => {
   return (
     <>
       {appState !== AppState.INTERVIEW_ACTIVE && (
-        <div className="absolute top-6 right-6 z-30">
-          <MenuButton onClick={() => setIsDrawerOpen(true)} />
-        </div>
+        <AppHeader onToggleSidebar={() => setIsDrawerOpen(true)} />
       )}
-      <SideDrawer
+      <AppSidebar
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
       />

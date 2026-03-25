@@ -1,0 +1,168 @@
+OBJ-5: Complete MOCKMATE-AI Application Flow
+Implement the end-to-end job application flow in mockmate-ai, covering the entire journey from the Apply button click through fitness scoring, Zinterview backend validation, candidate registration, and scheduling-mode-aware success states.
+Proposed Changes
+Backend: Fitness Score Service
+[MODIFY] 
+fitnessScoreService.js
+Complete rewrite of the fitness scoring engine:
+Model upgrade: Switch from gemini-1.5-flash → gemini-2.5-flash
+5-parameter weighted scoring matching the prompt spec:
+Skills Match (35%), Experience Relevance (20%), Education Fit (10%), Role Alignment (20%), Keyword Density (15%)
+Structured output: Return score 0–100, per-parameter breakdown, and recommendation label (STRONG_MATCH | GOOD_MATCH | FAIR_MATCH | LOW_MATCH)
+MongoDB-based caching: Hash-based cache using 
+(resumeId + openingId) as key with 7-day TTL
+GPTCache is Python-only, so we use a practical JS equivalent: hash the 
+(resumeText + jobDescription) pair, store in a FitnessScoreCache collection with TTL index
+For "semantic" similarity: normalize the resume+JD text, produce a deterministic hash, and check for exact match first; for near-matches, store a text fingerprint (top-N TF-IDF terms sorted) and compare fingerprints
+Persistent score storage: After calculation, save the score directly on the JobApplication document with full breakdown
+Cost optimization: Truncate resume text to 4000 chars and JD to 2500 chars to minimize tokens while retaining accuracy
+
+Backend: Application Controller
+[MODIFY] 
+jobApplicationController.js
+Enhance the submit flow with the full OBJ-5 pipeline:
+POST /api/applications/submit-full — New endpoint that:
+Checks if opening is still active
+Checks for existing application (dedup)
+Extracts resume text from S3 (via 
+CandidateResume lookup)
+Calls fitnessScoreService.calculateFitnessScore()
+Returns fitness result to frontend for display
+POST /api/applications/finalize — After user reviews score:
+Validates fitness score against opening's mockmateConfig.fitnessThreshold
+If failed → returns rejection with appropriate message
+If passed → creates the JobApplication record with full fitness breakdown
+Calls ZinterviewService.createCandidate() to register on Zinterview
+Stores the returned interviewReportId on the application
+Returns scheduling mode + interview URL for frontend handling
+Save profile logic: On savedDetails: true, upsert 
+CandidateProfile with all UserDetails.jsx-matching fields
+Saved-details fast-path: If CandidateProfile.savedDetails === true and all fields populated, allow direct apply (skip form, show confirmation toast)
+
+Backend: Application Routes
+[MODIFY] 
+applicationRoutes.js
+Add the two new endpoints:
+POST /submit-full → full application with fitness scoring
+POST /finalize → post-score validation + candidate registration
+PUT /profile/me → save/update candidate profile
+
+Backend: CandidateProfile Model
+[MODIFY] 
+CandidateProfile.js
+The model already has firstName, lastName, preferredName, country, phone — no schema changes needed.
+
+Frontend: Application Flow Modal
+[NEW] 
+ApplicationFlowModal.jsx
+Top-level orchestrator modal that manages the entire apply journey. This is the main new component that brings everything together:
+Saved Details Check — If savedDetails: true, show quick confirmation toast and proceed directly
+Application Form — Pre-filled form with all UserDetails.jsx fields + resume picker
+First-time Save Modal — "Save for future applications?" modal (on first apply)
+Cinematic Loading — Full overlay with animated Sparkles icon, rotating messages ("Analyzing your profile...", "Matching skills...", etc.)
+Fitness Score Result — Animated gauge with score, 5-parameter breakdown bars, color-coded label, recommendation copy
+Validation Gate — If org threshold not met → rejection UI
+Scheduling Mode Handler:
+APPROVAL_REQUIRED → Success popup: "Application submitted. Await HR review."
+MANUAL → Success popup: "HR will reach out to schedule."
+TIMEFRAME → Calendar/time-slot picker
+IMMEDIATE → Pre-apply warning, then auto-redirect to interview
+ANYTIME → "Proceed to Interview" button with link
+Success State — Animated success with scheduling-mode-aware copy
+
+Frontend: Rewrite ApplicationForm
+[MODIFY] 
+ApplicationForm.jsx
+Update fields to match 
+UserDetails.jsx:
+firstName (required), lastName (required), preferredName (required)
+email (required), experience (required, number)
+country (required, dropdown), phoneNumber (required)
+Resume picker (existing, works well)
+Remove linkedIn, portfolio, name fields (not in UserDetails.jsx)
+Beautiful animated form with two-column layout matching the provided screenshot
+
+Frontend: Rewrite FitnessScoreDisplay
+[MODIFY] 
+FitnessScoreDisplay.jsx
+Enhanced to match screenshots and spec:
+Loader: Pulsing Sparkles animation with rotating copy messages (cinematic)
+Result: Large animated ring gauge (matching screenshot — big score in center with "MATCH" label), 5-parameter breakdown bars below, color-coded by level
+Recommendation copy: Dynamic per-label messages from 
+jobConstants.js
+Action buttons: "Cancel & Improve Resume" + "Proceed to Interview" (or "Apply Anyway")
+Allow user to proceed regardless of score
+
+Frontend: Service Updates
+[MODIFY] 
+jobService.js
+Add new API methods:
+submitFullApplication(openingId, formData) → POST /api/applications/submit-full
+finalizeApplication(openingId, data) → POST /api/applications/finalize
+saveCandidateProfile(profileData) → PUT /api/applications/profile/me
+
+Frontend: Hook Updates
+[MODIFY] 
+useApplicationFlow.js
+Complete rewrite of the state machine:
+Add SAVE_DETAILS_PROMPT stage
+Add VALIDATING stage (checking org threshold)
+Add VALIDATION_FAILED stage (show rejection)
+Proper scheduling mode handling in SUCCESS stage
+Integration with savedDetails bypass
+Track schedulingMode, interviewUrl, interviewReportId in state
+
+Frontend: Job Detail & Card Integration
+[MODIFY] 
+JobDetailView.jsx
+Wire ApplicationFlowModal into the Apply button click
+Add IMMEDIATE mode pre-warning before opening the modal
+Handle all 4 apply button states properly
+[MODIFY] 
+JobCard.jsx
+Apply button state handling: PROCTORED_REQUIRED → redirect CTA, NOT_APPLIED → glowing button, APPLIED → status badge + lifecycle, CLOSED → disabled
+
+Verification Plan
+Manual Browser Testing
+Since this is a full-stack feature with modals, animations, and multi-step flows, browser testing is the most effective verification:
+Start the backend: cd /Users/harshithprathi/Zinterview/mockmate-ai/backend && node server.js
+Start the frontend: cd /Users/harshithprathi/Zinterview/mockmate-ai && npm start
+Navigate to Jobs page: Log in → Navigate to /mockmate/candidate/jobs
+Test Apply Flow:
+Click on a job card → Job Detail Modal opens
+Click "Apply Now" → Application Form should appear with pre-filled data
+Fill in required fields, select a resume
+Submit → Cinematic loading animation should appear
+Score result should show with animated gauge + breakdown
+Click "Proceed to Apply" → Should finalize based on scheduling mode
+Test saved details bypass: Apply to a second job → should skip form if details were saved
+Theme verification: Toggle dark/light mode at each step — all modals should look great in both
+Test edge cases: Closed opening (disabled button), already applied (status badge)
+IMPORTANT
+The user should verify the full flow manually in the browser since this involves complex multi-step modal interactions with animations that can't be fully validated via unit tests.
+
+
+
+
+
+
+
+
+Comments
+Artifact Comments
+Approved
+5-parameter weighted scoring matching the prompt spec:
+
+Skills Match (35%), Experience Relevance (20...
+Check the fitness score algorithm createCandidateFitScore used in Zinterview-backend to achieve same output like that.
+MongoDB-based caching: Hash-based cache using (resumeId + openingId) as key with 7-day TTL
+
+GPTCache...
+Store this permanently some where in the DB(a new collection if preferred) instead of as a cache. Because whenever the user opens any job opening they already applied in their past, every time we need to show them their resume fitness score achieved during time of application. So I don't think this is something that need to be expired or removed after few days.
+For "semantic" similarity: normalize the resume+JD text, produce a deterministic hash, and check for...
+For semantic similary storing, I want you to come up with the best algorithm applicable, utilise all the leverages of MongoDB, vector embedding, any other concepts, packages, necessary to implement the best optimised, fast working approach.
+Cost optimization: Truncate resume text to 4000 chars and JD to 2500 chars to minimize tokens while ...
+Do not trucate anything. This can lead to inappropriate scores. Choose some other better approach. Make sure to follow RAG architecture for all LLM integrations or AI api usages in our mockmate-ai applications.
+Implement the end-to-end job application flow in mockmate-ai, covering the entire journey from the A...
+Follow the RAG architecture for the AI related stuff for more proper AI responses if preferred and if you feel that will be helpful in our cases.
+

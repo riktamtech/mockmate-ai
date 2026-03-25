@@ -67,8 +67,6 @@ const candidateProfileSchema = new mongoose.Schema(
   },
 );
 
-candidateProfileSchema.index({ userId: 1 });
-
 const CandidateProfile = mongoose.model("CandidateProfile", candidateProfileSchema);
 
 module.exports = CandidateProfile;

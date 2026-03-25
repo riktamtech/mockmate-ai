@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BarChart3, TrendingUp, FileText, CheckCircle, XCircle, Clock, Users,
@@ -10,28 +10,28 @@ import {
   PolarRadiusAxis, LineChart, Line, CartesianGrid, Legend, Treemap,
 } from "recharts";
 import { analyticsService } from "../../services/analyticsService";
+import { BackToDashboardButton } from "../ui/BackToDashboardButton";
 
-// ── Color Palette ─────────────────────────────────────────────
+// ── Data-series Color Palette (intentionally static — these are chart colors, not surface colors) ──
 const COLORS = {
   violet: "#8B5CF6", blue: "#3B82F6", emerald: "#10B981",
   amber: "#F59E0B", rose: "#EF4444", indigo: "#6366F1",
   cyan: "#06B6D4", pink: "#EC4899", teal: "#14B8A6", slate: "#64748B",
 };
 const CHART_COLORS = Object.values(COLORS);
-const GRADIENT_BG = "linear-gradient(135deg, rgba(139,92,246,0.08), rgba(59,130,246,0.04))";
 
-// ── Custom Tooltip ────────────────────────────────────────────
+// ── Custom Tooltip (theme-aware) ──
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: "rgba(15,15,25,0.95)", backdropFilter: "blur(12px)",
-      border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px",
-      padding: "12px 16px", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+      background: "var(--chart-tooltip-bg)", backdropFilter: "blur(12px)",
+      border: "1px solid var(--chart-tooltip-border)", borderRadius: "12px",
+      padding: "12px 16px", boxShadow: "var(--bg-glass-shadow)",
     }}>
-      <p style={{ margin: "0 0 6px", fontSize: "11px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>{label}</p>
+      <p style={{ margin: "0 0 6px", fontSize: "11px", color: "var(--text-muted)", fontWeight: 500 }}>{label}</p>
       {payload.map((entry, i) => (
-        <p key={i} style={{ margin: "2px 0", fontSize: "13px", color: entry.color || "#f1f1f4", fontWeight: 600 }}>
+        <p key={i} style={{ margin: "2px 0", fontSize: "13px", color: entry.color || "var(--text-primary)", fontWeight: 600 }}>
           {entry.name}: {typeof entry.value === "number" ? entry.value.toLocaleString() : entry.value}
         </p>
       ))}
@@ -39,7 +39,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-// ── Animated Counter ──────────────────────────────────────────
+// ── Animated Counter ──
 function AnimatedNumber({ value, duration = 1200 }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
@@ -57,7 +57,7 @@ function AnimatedNumber({ value, duration = 1200 }) {
   return <>{typeof value === "string" && value.includes("%") ? `${display}%` : display.toLocaleString()}</>;
 }
 
-// ── Stat Card ─────────────────────────────────────────────────
+// ── Stat Card (theme-aware) ──
 function StatCard({ icon: Icon, label, value, color, trend, trendValue, delay = 0 }) {
   return (
     <motion.div
@@ -67,8 +67,8 @@ function StatCard({ icon: Icon, label, value, color, trend, trendValue, delay = 
       whileHover={{ y: -4, boxShadow: `0 20px 60px ${color}20` }}
       style={{
         padding: "20px", borderRadius: "16px", flex: "1 1 150px",
-        background: "rgba(255,255,255,0.02)", backdropFilter: "blur(10px)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "var(--bg-surface)", backdropFilter: "blur(10px)",
+        border: "1px solid var(--border-subtle)",
         position: "relative", overflow: "hidden",
       }}
     >
@@ -87,18 +87,18 @@ function StatCard({ icon: Icon, label, value, color, trend, trendValue, delay = 
         }}>
           <Icon size={16} color={color} />
         </div>
-        <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: "12px", color: "var(--text-muted)", fontWeight: 500 }}>{label}</span>
       </div>
       <div style={{ display: "flex", alignItems: "baseline", gap: "8px", position: "relative" }}>
-        <span style={{ fontSize: "28px", fontWeight: 700, color: "#f1f1f4", letterSpacing: "-0.5px" }}>
+        <span style={{ fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>
           <AnimatedNumber value={typeof value === "string" ? parseInt(value) || 0 : value} />
           {typeof value === "string" && value.includes("%") ? "%" : ""}
         </span>
         {trend && (
           <span style={{
             display: "flex", alignItems: "center", gap: "2px", fontSize: "11px", fontWeight: 600,
-            color: trend === "up" ? "#10B981" : "#EF4444", padding: "2px 6px",
-            borderRadius: "6px", background: trend === "up" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+            color: trend === "up" ? "var(--success)" : "var(--error)", padding: "2px 6px",
+            borderRadius: "6px", background: trend === "up" ? "var(--success-bg)" : "var(--error-bg)",
           }}>
             {trend === "up" ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
             {trendValue}
@@ -109,7 +109,7 @@ function StatCard({ icon: Icon, label, value, color, trend, trendValue, delay = 
   );
 }
 
-// ── Chart Card Wrapper ────────────────────────────────────────
+// ── Chart Card Wrapper (theme-aware) ──
 function ChartCard({ title, subtitle, children, delay = 0, span = 1 }) {
   return (
     <motion.div
@@ -118,21 +118,21 @@ function ChartCard({ title, subtitle, children, delay = 0, span = 1 }) {
       transition={{ delay, type: "spring", stiffness: 150 }}
       style={{
         padding: "24px", borderRadius: "16px",
-        background: "rgba(255,255,255,0.02)", backdropFilter: "blur(10px)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "var(--bg-surface)", backdropFilter: "blur(10px)",
+        border: "1px solid var(--border-subtle)",
         gridColumn: span > 1 ? `span ${span}` : undefined,
       }}
     >
       <div style={{ marginBottom: "20px" }}>
-        <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "#f1f1f4" }}>{title}</h3>
-        {subtitle && <p style={{ margin: "4px 0 0", fontSize: "12px", color: "rgba(255,255,255,0.3)" }}>{subtitle}</p>}
+        <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "var(--text-primary)" }}>{title}</h3>
+        {subtitle && <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--text-muted)" }}>{subtitle}</p>}
       </div>
       {children}
     </motion.div>
   );
 }
 
-// ── Main Component ────────────────────────────────────────────
+// ── Main Component ──
 export default function JobAnalyticsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -166,7 +166,6 @@ export default function JobAnalyticsPage() {
       rejected: d.rejected || 0,
     })), [data]);
 
-  // Synthesize radar data from summary
   const radarData = useMemo(() => [
     { metric: "Applications", value: Math.min(summary.totalApplications || 0, 100), fullMark: 100 },
     { metric: "Approval Rate", value: summary.totalApplications ? Math.round(((summary.approved || 0) / summary.totalApplications) * 100) : 0, fullMark: 100 },
@@ -176,7 +175,6 @@ export default function JobAnalyticsPage() {
     { metric: "Completion", value: summary.totalApplications ? Math.round(((summary.interviewsCompleted || 0) / Math.max(summary.approved || 1, 1)) * 100) : 0, fullMark: 100 },
   ], [summary]);
 
-  // Synthesize growth/cumulative data
   const growthData = useMemo(() => {
     let cumulative = 0;
     return weeklyData.map(w => {
@@ -185,7 +183,6 @@ export default function JobAnalyticsPage() {
     });
   }, [weeklyData]);
 
-  // Fitness distribution histogram
   const fitnessDistribution = useMemo(() =>
     (data?.fitnessHistogram || [
       { range: "0-20", count: 2 }, { range: "20-40", count: 5 },
@@ -197,7 +194,6 @@ export default function JobAnalyticsPage() {
       fill: [COLORS.rose, COLORS.amber, COLORS.amber, COLORS.blue, COLORS.emerald][i] || COLORS.slate,
     })), [data]);
 
-  // Skill match treemap data
   const skillMatchData = useMemo(() =>
     (data?.topSkills || [
       { name: "React", size: 85 }, { name: "Node.js", size: 72 },
@@ -208,8 +204,8 @@ export default function JobAnalyticsPage() {
 
   const timeRangeStyle = useCallback((active) => ({
     padding: "6px 14px", borderRadius: "8px", border: "none",
-    background: active ? "rgba(139,92,246,0.15)" : "transparent",
-    color: active ? "#8B5CF6" : "rgba(255,255,255,0.35)",
+    background: active ? "var(--accent-bg)" : "transparent",
+    color: active ? "var(--accent-text)" : "var(--text-muted)",
     fontSize: "12px", fontWeight: active ? 600 : 400, cursor: "pointer",
     transition: "all 0.2s",
   }), []);
@@ -218,9 +214,9 @@ export default function JobAnalyticsPage() {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: "16px" }}>
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-          style={{ width: "40px", height: "40px", border: "3px solid rgba(139,92,246,0.15)", borderTop: "3px solid #8B5CF6", borderRadius: "50%" }} />
+          style={{ width: "40px", height: "40px", border: "3px solid var(--spinner-track)", borderTop: "3px solid var(--spinner-fill)", borderRadius: "50%" }} />
         <motion.p animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 2, repeat: Infinity }}
-          style={{ margin: 0, fontSize: "14px", color: "rgba(255,255,255,0.4)" }}>Loading analytics...</motion.p>
+          style={{ margin: 0, fontSize: "14px", color: "var(--text-muted)" }}>Loading analytics...</motion.p>
       </div>
     );
   }
@@ -228,26 +224,34 @@ export default function JobAnalyticsPage() {
   const approvalRate = summary.totalApplications ? Math.round(((summary.approved || 0) / summary.totalApplications) * 100) : 0;
   const responseRate = Math.round(summary.recruiterResponseRate || 0);
 
+  /* Chart theming: use CSS vars via getComputedStyle for axis/grid colors */
+  const chartGridColor = "var(--chart-grid)";
+  const chartAxisStyle = { fill: "var(--chart-axis-label)", fontSize: 10 };
+
   return (
     <div style={{ padding: "32px 24px", maxWidth: "1100px", margin: "0 auto" }}>
+      <div style={{ marginBottom: "24px" }}>
+        <BackToDashboardButton />
+      </div>
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "32px", flexWrap: "wrap", gap: "12px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
           <div style={{
             width: "44px", height: "44px", borderRadius: "14px",
-            background: "linear-gradient(135deg, #8B5CF6, #3B82F6)",
+            background: "var(--accent-gradient)",
             display: "flex", alignItems: "center", justifyContent: "center",
             boxShadow: "0 8px 32px rgba(139,92,246,0.3)",
           }}>
             <BarChart3 size={22} color="#fff" />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 700, color: "#f1f1f4", letterSpacing: "-0.5px" }}>Job Analytics</h1>
-            <p style={{ margin: "2px 0 0", fontSize: "13px", color: "rgba(255,255,255,0.35)" }}>Your career journey at a glance</p>
+            <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.5px" }}>Job Analytics</h1>
+            <p style={{ margin: "2px 0 0", fontSize: "13px", color: "var(--text-muted)" }}>Your career journey at a glance</p>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "4px", background: "rgba(255,255,255,0.03)", borderRadius: "10px", padding: "3px" }}>
+        <div style={{ display: "flex", gap: "4px", background: "var(--hover-overlay)", borderRadius: "10px", padding: "3px" }}>
           {["1w", "2w", "4w", "3m", "all"].map(r => (
             <button key={r} onClick={() => setTimeRange(r)} style={timeRangeStyle(timeRange === r)}>{r === "all" ? "All" : r}</button>
           ))}
@@ -266,7 +270,7 @@ export default function JobAnalyticsPage() {
 
       {/* Charts Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px", marginBottom: "24px" }}>
-        {/* Weekly Activity + Trend Area */}
+        {/* Weekly Activity */}
         <ChartCard title="Weekly Activity" subtitle="Applications & approvals over time" delay={0.3} span={2}>
           {weeklyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -281,15 +285,15 @@ export default function JobAnalyticsPage() {
                     <stop offset="95%" stopColor={COLORS.emerald} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="week" tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                <XAxis dataKey="week" tick={chartAxisStyle} axisLine={false} tickLine={false} />
+                <YAxis tick={chartAxisStyle} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area type="monotone" dataKey="applications" stroke={COLORS.violet} fill="url(#gradViolet)" strokeWidth={2} name="Applications" />
                 <Area type="monotone" dataKey="approved" stroke={COLORS.emerald} fill="url(#gradEmerald)" strokeWidth={2} name="Approved" />
               </AreaChart>
             </ResponsiveContainer>
-          ) : <p style={{ color: "rgba(255,255,255,0.2)", textAlign: "center", padding: "40px", fontSize: "13px" }}>No activity data yet</p>}
+          ) : <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "40px", fontSize: "13px" }}>No activity data yet</p>}
         </ChartCard>
 
         {/* Status Distribution Donut */}
@@ -309,20 +313,20 @@ export default function JobAnalyticsPage() {
                 {statusData.map((entry, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                     <div style={{ width: "8px", height: "8px", borderRadius: "3px", background: entry.fill }} />
-                    <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>{entry.name}</span>
+                    <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{entry.name}</span>
                   </div>
                 ))}
               </div>
             </>
-          ) : <p style={{ color: "rgba(255,255,255,0.2)", textAlign: "center", padding: "40px", fontSize: "13px" }}>No data</p>}
+          ) : <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "40px", fontSize: "13px" }}>No data</p>}
         </ChartCard>
 
-        {/* Radar / Net Graph — Performance Overview */}
+        {/* Performance Radar */}
         <ChartCard title="Performance Radar" subtitle="Multi-dimensional profile analysis" delay={0.4}>
           <ResponsiveContainer width="100%" height={220}>
             <RadarChart data={radarData} outerRadius="70%">
-              <PolarGrid stroke="rgba(255,255,255,0.06)" />
-              <PolarAngleAxis dataKey="metric" tick={{ fill: "rgba(255,255,255,0.35)", fontSize: 10 }} />
+              <PolarGrid stroke="var(--border-subtle)" />
+              <PolarAngleAxis dataKey="metric" tick={{ fill: "var(--text-muted)", fontSize: 10 }} />
               <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
               <Radar name="Profile" dataKey="value" stroke={COLORS.violet} fill={COLORS.violet} fillOpacity={0.15} strokeWidth={2} />
               <Tooltip content={<CustomTooltip />} />
@@ -330,7 +334,7 @@ export default function JobAnalyticsPage() {
           </ResponsiveContainer>
         </ChartCard>
 
-        {/* Growth Graph — Cumulative */}
+        {/* Growth Trajectory */}
         <ChartCard title="Growth Trajectory" subtitle="Cumulative applications over time" delay={0.45}>
           {growthData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -341,23 +345,23 @@ export default function JobAnalyticsPage() {
                     <stop offset="100%" stopColor={COLORS.violet} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="week" tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+                <XAxis dataKey="week" tick={chartAxisStyle} axisLine={false} tickLine={false} />
+                <YAxis tick={chartAxisStyle} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Line type="monotone" dataKey="cumulative" stroke="url(#gradGrowth)" strokeWidth={3} dot={{ fill: COLORS.violet, r: 4 }} name="Total" />
               </LineChart>
             </ResponsiveContainer>
-          ) : <p style={{ color: "rgba(255,255,255,0.2)", textAlign: "center", padding: "40px", fontSize: "13px" }}>No growth data</p>}
+          ) : <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "40px", fontSize: "13px" }}>No growth data</p>}
         </ChartCard>
 
-        {/* Fitness Score Distribution Histogram */}
+        {/* Fitness Score Distribution */}
         <ChartCard title="Fitness Score Distribution" subtitle="Resume match quality breakdown" delay={0.5}>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={fitnessDistribution}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="range" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: "rgba(255,255,255,0.25)", fontSize: 10 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" />
+              <XAxis dataKey="range" tick={{ fill: "var(--text-muted)", fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={chartAxisStyle} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
               <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Applications">
                 {fitnessDistribution.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
@@ -371,7 +375,7 @@ export default function JobAnalyticsPage() {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", padding: "12px 0" }}>
             <div style={{ position: "relative", width: "140px", height: "140px" }}>
               <svg viewBox="0 0 140 140" style={{ transform: "rotate(-90deg)" }}>
-                <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="12" />
+                <circle cx="70" cy="70" r="60" fill="none" stroke="var(--border-subtle)" strokeWidth="12" />
                 <motion.circle cx="70" cy="70" r="60" fill="none" stroke={COLORS.emerald} strokeWidth="12" strokeLinecap="round"
                   strokeDasharray={`${2 * Math.PI * 60}`}
                   initial={{ strokeDashoffset: 2 * Math.PI * 60 }}
@@ -379,13 +383,13 @@ export default function JobAnalyticsPage() {
                   transition={{ duration: 1.5, ease: "easeOut" }} />
               </svg>
               <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: "32px", fontWeight: 700, color: "#f1f1f4" }}>
+                <span style={{ fontSize: "32px", fontWeight: 700, color: "var(--text-primary)" }}>
                   <AnimatedNumber value={responseRate} />
                 </span>
-                <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>%</span>
+                <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>%</span>
               </div>
             </div>
-            <p style={{ margin: 0, fontSize: "12px", color: "rgba(255,255,255,0.35)", textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: "12px", color: "var(--text-muted)", textAlign: "center" }}>
               {responseRate >= 80 ? "Excellent response rate!" : responseRate >= 50 ? "Good — most recruiters are responding" : "Low — keep applying to increase your chances"}
             </p>
           </div>
@@ -396,33 +400,33 @@ export default function JobAnalyticsPage() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
         style={{
           padding: "20px 24px", borderRadius: "16px",
-          background: "linear-gradient(135deg, rgba(139,92,246,0.06), rgba(59,130,246,0.04))",
-          border: "1px solid rgba(139,92,246,0.12)",
+          background: "var(--accent-bg)",
+          border: "1px solid var(--notification-unread-border)",
           display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap",
         }}>
         <div style={{
           width: "40px", height: "40px", borderRadius: "12px",
-          background: "linear-gradient(135deg, #8B5CF6, #3B82F6)",
+          background: "var(--accent-gradient)",
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
           <Sparkles size={18} color="#fff" />
         </div>
         <div style={{ flex: 1, minWidth: "200px" }}>
-          <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "#f1f1f4" }}>AI Insights</p>
-          <p style={{ margin: "4px 0 0", fontSize: "12px", color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>
+          <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>AI Insights</p>
+          <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--text-secondary)", lineHeight: 1.6 }}>
             {summary.totalApplications >= 10
               ? `You've applied to ${summary.totalApplications} jobs with a ${approvalRate}% approval rate. ${approvalRate >= 60 ? "Great performance!" : "Try targeting roles with higher fitness scores."}`
               : "Apply to more jobs to unlock personalized career insights and recommendations."}
           </p>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
-          <div style={{ textAlign: "center", padding: "8px 16px", borderRadius: "10px", background: "rgba(255,255,255,0.03)" }}>
+          <div style={{ textAlign: "center", padding: "8px 16px", borderRadius: "10px", background: "var(--hover-overlay-medium)" }}>
             <p style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: COLORS.emerald }}>{approvalRate}%</p>
-            <p style={{ margin: "2px 0 0", fontSize: "10px", color: "rgba(255,255,255,0.3)" }}>Success Rate</p>
+            <p style={{ margin: "2px 0 0", fontSize: "10px", color: "var(--text-muted)" }}>Success Rate</p>
           </div>
-          <div style={{ textAlign: "center", padding: "8px 16px", borderRadius: "10px", background: "rgba(255,255,255,0.03)" }}>
+          <div style={{ textAlign: "center", padding: "8px 16px", borderRadius: "10px", background: "var(--hover-overlay-medium)" }}>
             <p style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: COLORS.violet }}>{Math.round(summary.avgFitnessScore || 0)}</p>
-            <p style={{ margin: "2px 0 0", fontSize: "10px", color: "rgba(255,255,255,0.3)" }}>Avg Score</p>
+            <p style={{ margin: "2px 0 0", fontSize: "10px", color: "var(--text-muted)" }}>Avg Score</p>
           </div>
         </div>
       </motion.div>
