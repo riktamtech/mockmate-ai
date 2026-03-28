@@ -1,86 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../../services/api";
 import { DashboardHeader } from "../Dashboard";
 import { SideDrawer } from "../SideDrawer";
-import {
-  Users,
-  FileText,
-  Activity,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  Loader2,
-  BarChart3,
-  ChevronsLeft,
-  ChevronsRight,
-  Zap,
-  Coins,
-  X,
-  MessageSquare,
-} from "lucide-react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  AreaChart,
-  Area,
-} from "recharts";
 import { useAppStore } from "../../store/useAppStore";
 import InterviewDetailModal from "./InterviewDetailModal";
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
-
-const Skeleton = ({ className }) => (
-  <div className={`animate-pulse bg-slate-200 rounded ${className}`} />
-);
-
-const StatsCard = ({
-  icon: Icon,
-  label,
-  value,
-  bgColor,
-  textColor,
-  tooltip,
-}) => {
-  const [showTooltip, setShowTooltip] = useState(false);
-
-  return (
-    <div
-      className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 relative group"
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-    >
-      <div className={`p-3 ${bgColor} ${textColor} rounded-xl`}>
-        <Icon size={24} />
-      </div>
-      <div>
-        <p className="text-sm text-slate-500">{label}</p>
-        <h3 className="text-2xl font-bold text-slate-800">{value}</h3>
-      </div>
-
-      <div
-        className={`absolute -top-14 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-sm text-white text-xs px-3 py-2 rounded-lg shadow-xl whitespace-nowrap z-50 transition-all duration-300 ease-out pointer-events-none transform ${
-          showTooltip
-            ? "opacity-100 translate-y-0 scale-100"
-            : "opacity-0 translate-y-2 scale-95"
-        }`}
-      >
-        {tooltip}
-        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900/90"></div>
-      </div>
-    </div>
-  );
-};
+import VideoPlayerModal from "./VideoPlayer/VideoPlayerModal";
+import DashboardStats from "./DashboardStats";
+import UserListTable from "./UserListTable";
+import UserDetailsView from "./UserDetailsView";
+import ProctoredInterviewsStats from "./ProctoredInterviewsStats";
+import ProctoredInterviewsTable from "./ProctoredInterviewsTable";
+import ResumeViewerModal from "./ResumeViewerModal";
 
 const AdminDashboard = () => {
   const { user, setUser, resetSession, setFeedbackData } = useAppStore();
@@ -107,14 +38,82 @@ const AdminDashboard = () => {
     useState(null);
   const [transcriptLoadingId, setTranscriptLoadingId] = useState(null);
 
+  // Proctored interview state
+  const [proctoredInterviews, setProctoredInterviews] = useState([]);
+  const [proctoredLoading, setProctoredLoading] = useState(false);
+  const [proctoredPage, setProctoredPage] = useState(1);
+  const [proctoredTotalPages, setProctoredTotalPages] = useState(1);
+  const [proctoredTotal, setProctoredTotal] = useState(0);
+  const [proctoredSearch, setProctoredSearch] = useState("");
+  const [proctoredStats, setProctoredStats] = useState(null);
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [proctoredFilters, setProctoredFilters] = useState({
+    statuses: [],
+    roles: [],
+    experience: [],
+    minScore: null,
+    maxScore: null,
+    date: null,
+  });
+  const [openFilterDropdown, setOpenFilterDropdown] = useState(null);
+  const [resumeModal, setResumeModal] = useState({
+    open: false,
+    url: "",
+    fileName: "",
+    loading: false,
+  });
+  const filterRef = useRef(null);
+  const proctoredSearchTimerRef = useRef(null);
+
+  // Video player modal state
+  const [videoModal, setVideoModal] = useState({ open: false, interview: null });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) {
+        setOpenFilterDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   useEffect(() => {
     // only fetch stats/users if we are in dashboard mode
     if (viewMode === "dashboard") {
       fetchStats();
       fetchUsers();
       fetchUserGrowth();
+      fetchProctoredInterviews();
+      fetchProctoredStats();
+      fetchAvailableRoles();
     }
   }, [page, viewMode]);
+
+  // Re-fetch proctored interviews when page or filters change with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (viewMode === "dashboard") {
+        fetchProctoredInterviews();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [proctoredPage, proctoredFilters]);
+
+  // Debounce proctored search
+  useEffect(() => {
+    if (proctoredSearchTimerRef.current)
+      clearTimeout(proctoredSearchTimerRef.current);
+    proctoredSearchTimerRef.current = setTimeout(() => {
+      setProctoredPage(1);
+      fetchProctoredInterviews();
+    }, 500);
+    return () => {
+      if (proctoredSearchTimerRef.current)
+        clearTimeout(proctoredSearchTimerRef.current);
+    };
+  }, [proctoredSearch]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -227,623 +226,101 @@ const AdminDashboard = () => {
     }
   };
 
-  const renderStats = () => {
-    if (!stats) {
-      return (
-        <div className="space-y-6">
-          {/* Stats Cards Skeleton */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4"
-              >
-                <Skeleton className="h-12 w-12 rounded-xl" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-8 w-16" />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Charts Skeleton */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[...Array(2)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-80 flex flex-col"
-              >
-                <Skeleton className="h-6 w-48 mb-4" />
-                <div className="flex-1 w-full relative">
-                  <Skeleton className="absolute inset-0 rounded-xl" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+  const fetchProctoredInterviews = async () => {
+    setProctoredLoading(true);
+    try {
+      const statusStr =
+        proctoredFilters.statuses.length > 0
+          ? proctoredFilters.statuses.join(",")
+          : "all";
+      const data = await api.getAdminProctoredInterviews(
+        proctoredPage,
+        10,
+        proctoredSearch,
+        statusStr,
+        {
+          role: proctoredFilters.roles.join(","),
+          experience: proctoredFilters.experience.join(","),
+          minScore: proctoredFilters.minScore,
+          maxScore: proctoredFilters.maxScore,
+          date: proctoredFilters.date,
+        },
       );
+      setProctoredInterviews(data.interviews || []);
+      setProctoredTotalPages(data.pages || 1);
+      setProctoredTotal(data.total || 0);
+    } catch (error) {
+      console.error("Failed to fetch proctored interviews", error);
+    } finally {
+      setProctoredLoading(false);
     }
-
-    const pieData = Object.entries(stats.interviewsByStatus || {}).map(
-      ([name, value]) => ({
-        name: name.replace("_", " "),
-        value,
-      }),
-    );
-
-    return (
-      <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <StatsCard
-            icon={Users}
-            label="Total Users"
-            value={stats.totalUsers}
-            bgColor="bg-blue-100"
-            textColor="text-blue-600"
-            tooltip="Total number of registered candidates on the platform, excluding test accounts."
-          />
-
-          <StatsCard
-            icon={FileText}
-            label="Total Interviews"
-            value={stats.totalInterviews}
-            bgColor="bg-purple-100"
-            textColor="text-purple-600"
-            tooltip="Total number of mock interviews taken by all users"
-          />
-
-          <StatsCard
-            icon={Activity}
-            label="Active Users"
-            value={stats.activeUsersCount}
-            bgColor="bg-emerald-100"
-            textColor="text-emerald-600"
-            tooltip="Number of unique users who have participated in at least one interview"
-          />
-
-          <StatsCard
-            icon={BarChart3}
-            label="Completion Rate"
-            value={`${
-              stats.totalInterviews
-                ? Math.round(
-                    ((stats.interviewsByStatus?.COMPLETED || 0) /
-                      stats.totalInterviews) *
-                      100,
-                  )
-                : 0
-            }%`}
-            bgColor="bg-orange-100"
-            textColor="text-orange-600"
-            tooltip="Percentage of started interviews that were successfully completed"
-          />
-
-          <StatsCard
-            icon={Zap}
-            label="Total Tokens"
-            value={stats.tokenStats?.totalTokens?.toLocaleString() || "0"}
-            bgColor="bg-yellow-100"
-            textColor="text-yellow-600"
-            tooltip={
-              <div>
-                <p>
-                  Input tokens:{" "}
-                  {stats.tokenStats?.totalInputTokens?.toLocaleString() || 0}
-                </p>
-                <p>
-                  Output tokens:{" "}
-                  {stats.tokenStats?.totalOutputTokens?.toLocaleString() || 0}
-                </p>
-              </div>
-            }
-          />
-
-          <StatsCard
-            icon={Coins}
-            label="Est. Cost"
-            value={`$${(stats.tokenStats?.totalCost || 0).toFixed(4)}`}
-            bgColor="bg-green-100"
-            textColor="text-green-600"
-            tooltip="Total estimated cost based on token usage"
-          />
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h3 className="text-lg font-semibold mb-4 text-slate-800">
-              Interview Status Distribution
-            </h3>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    paddingAngle={5}
-                    dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h3 className="text-lg font-semibold mb-1 text-slate-800">
-              New User Registrations
-            </h3>
-            <p className="text-xs text-slate-400 mb-4">Last 7 days</p>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={userGrowth}
-                  margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
-                >
-                  <defs>
-                    <linearGradient
-                      id="growthGradient"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.4} />
-                      <stop
-                        offset="95%"
-                        stopColor="#8b5cf6"
-                        stopOpacity={0.02}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#e2e8f0"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 12, fill: "#94a3b8" }}
-                    axisLine={{ stroke: "#e2e8f0" }}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: 12, fill: "#94a3b8" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "rgba(15, 23, 42, 0.9)",
-                      border: "none",
-                      borderRadius: "10px",
-                      boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
-                      padding: "10px 14px",
-                    }}
-                    itemStyle={{ color: "#e2e8f0", fontSize: 13 }}
-                    labelStyle={{
-                      color: "#94a3b8",
-                      fontSize: 11,
-                      marginBottom: 4,
-                    }}
-                    formatter={(value) => [
-                      `${value} new user${value !== 1 ? "s" : ""}`,
-                      "Registrations",
-                    ]}
-                    cursor={{
-                      stroke: "#8b5cf6",
-                      strokeWidth: 1,
-                      strokeDasharray: "4 4",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#8b5cf6"
-                    strokeWidth={2.5}
-                    fill="url(#growthGradient)"
-                    dot={{
-                      r: 4,
-                      fill: "#8b5cf6",
-                      stroke: "#fff",
-                      strokeWidth: 2,
-                    }}
-                    activeDot={{
-                      r: 6,
-                      fill: "#7c3aed",
-                      stroke: "#fff",
-                      strokeWidth: 2,
-                    }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   };
 
-  const renderUserList = () => (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <h3 className="text-lg font-bold text-slate-800">Registered Users</h3>
-        <div className="relative w-full sm:w-64">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-              title="Clear search"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
-      </div>
+  const fetchProctoredStats = async () => {
+    try {
+      const data = await api.getAdminProctoredStats();
+      setProctoredStats(data);
+    } catch (error) {
+      console.error("Failed to fetch proctored stats", error);
+    }
+  };
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 text-slate-500 text-sm font-semibold border-b border-slate-200">
-              <th className="p-4">User</th>
-              <th className="p-4">Email</th>
-              <th className="p-4">Interviews</th>
-              <th className="p-4">Joined</th>
-              <th className="p-4">Resume</th>
-              <th className="p-4 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading ? (
-              [...Array(5)].map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0"></div>
-                      <div className="h-4 w-32 bg-slate-200 rounded"></div>
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    <div className="h-4 w-48 bg-slate-200 rounded"></div>
-                  </td>
-                  <td className="p-4">
-                    <div className="h-6 w-12 bg-slate-200 rounded-lg"></div>
-                  </td>
-                  <td className="p-4">
-                    <div className="h-4 w-24 bg-slate-200 rounded"></div>
-                  </td>
-                  <td className="p-4">
-                    <div className="h-4 w-16 bg-slate-200 rounded"></div>
-                  </td>
-                  <td className="p-4 text-right">
-                    <div className="h-7 w-24 bg-slate-200 rounded-lg ml-auto"></div>
-                  </td>
-                </tr>
-              ))
-            ) : users.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="p-8 text-center text-slate-500">
-                  No users found.
-                </td>
-              </tr>
-            ) : (
-              users.map((user) => (
-                <tr
-                  key={user._id}
-                  className="hover:bg-slate-50 transition-colors group"
-                >
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white flex items-center justify-center text-xs font-bold">
-                        {user.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="font-medium text-slate-700">
-                        {user.name}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="p-4 text-slate-600 text-sm">{user.email}</td>
-                  <td className="p-4">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">
-                      {user.interviewCount}
-                    </span>
-                  </td>
-                  <td className="p-4 text-slate-500 text-sm">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="p-4">
-                    {user.resumeUrl ? (
-                      <a
-                        href={user.resumeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 hover:underline text-sm flex items-center gap-1"
-                      >
-                        <FileText size={14} /> View
-                      </a>
-                    ) : (
-                      <span className="text-slate-400 text-sm italic">
-                        None
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-4 text-right">
-                    <button
-                      onClick={() => handleUserView(user._id)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-xs font-medium ml-auto"
-                    >
-                      <Eye size={14} /> View History
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+  const fetchAvailableRoles = async () => {
+    try {
+      const data = await api.getAdminProctoredRoles();
+      setAvailableRoles(data.roles || []);
+    } catch (error) {
+      console.error("Failed to fetch roles", error);
+    }
+  };
 
-      {/* Pagination */}
-      <div className="p-4 border-t border-slate-200 flex items-center justify-between">
-        <button
-          disabled={page === 1}
-          onClick={() => {
-            const newPage = page - 1;
-            setPage(newPage);
-            if (newPage < visiblePageStart) {
-              setVisiblePageStart(Math.max(1, newPage - 4));
-            }
-          }}
-          className="p-2 flex items-center gap-1 text-slate-500 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <ChevronLeft size={16} /> Prev
-        </button>
+  const handleOpenResume = async (interviewId) => {
+    setResumeModal({
+      open: true,
+      url: "",
+      fileName: "",
+      id: interviewId,
+      loading: true,
+    });
+    try {
+      const data = await api.getAdminProctoredResumeUrl(interviewId);
+      setResumeModal({
+        open: true,
+        url: data.url,
+        fileName: data.fileName || "resume.pdf",
+        id: interviewId,
+        loading: false,
+      });
+    } catch {
+      setResumeModal({
+        open: false,
+        url: "",
+        fileName: "",
+        id: null,
+        loading: false,
+      });
+      alert("Resume not available for this interview.");
+    }
+  };
 
-        <div className="flex items-center gap-2">
-          {/* Scroll Left 5 */}
-          <button
-            disabled={visiblePageStart === 1}
-            onClick={() =>
-              setVisiblePageStart(Math.max(1, visiblePageStart - 5))
-            }
-            className="p-1 text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Previous 5 pages"
-          >
-            <ChevronsLeft size={16} />
-          </button>
+  const hasActiveFilters =
+    proctoredFilters.statuses.length > 0 ||
+    proctoredFilters.roles.length > 0 ||
+    proctoredFilters.experience.length > 0 ||
+    proctoredFilters.minScore !== null ||
+    proctoredFilters.maxScore !== null ||
+    proctoredFilters.date;
 
-          {Array.from({ length: 5 }, (_, i) => {
-            const p = visiblePageStart + i;
-
-            if (p > 0 && p <= totalPages) {
-              return (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                    page === p
-                      ? "bg-blue-600 text-white"
-                      : "text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  {p}
-                </button>
-              );
-            }
-            return null;
-          })}
-
-          {/* Scroll Right 5 */}
-          <button
-            disabled={visiblePageStart + 5 > totalPages}
-            onClick={() =>
-              setVisiblePageStart(Math.min(totalPages, visiblePageStart + 5))
-            }
-            className="p-1 text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
-            title="Next 5 pages"
-          >
-            <ChevronsRight size={16} />
-          </button>
-        </div>
-
-        <button
-          disabled={page === totalPages}
-          onClick={() => {
-            const newPage = page + 1;
-            setPage(newPage);
-            if (newPage >= visiblePageStart + 5) {
-              setVisiblePageStart(visiblePageStart + 5);
-            }
-          }}
-          className="p-2 flex items-center gap-1 text-slate-500 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next <ChevronRight size={16} />
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderUserDetails = () => {
-    if (!selectedUser) return null;
-
-    return (
-      <div className="space-y-6">
-        <button
-          onClick={() => setSearchParams({})}
-          className="flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-4 transition-colors"
-        >
-          <ChevronLeft size={18} /> Back to Dashboard
-        </button>
-
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center text-2xl font-bold border-4 border-slate-50 shadow-sm">
-                {selectedUser.name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
-                  {selectedUser.name}
-                </h2>
-                <p className="text-slate-500">{selectedUser.email}</p>
-              </div>
-            </div>
-            {selectedUser.resumeUrl && (
-              <a
-                href={selectedUser.resumeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors font-medium"
-              >
-                <FileText size={18} /> Resume
-              </a>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
-            <div>
-              <p className="text-slate-500 mb-1">Experience</p>
-              <p className="font-medium text-slate-800">
-                {selectedUser.yearsOfExperience || 0} Years
-              </p>
-            </div>
-            <div>
-              <p className="text-slate-500 mb-1">Level</p>
-              <p className="font-medium text-slate-800 capitalize">
-                {selectedUser.experienceLevel || "-"}
-              </p>
-            </div>
-            <div>
-              <p className="text-slate-500 mb-1">Current Role</p>
-              <p className="font-medium text-slate-800">
-                {selectedUser.currentRole || "-"}
-              </p>
-            </div>
-            <div>
-              <p className="text-slate-500 mb-1">Target Role</p>
-              <p className="font-medium text-slate-800">
-                {selectedUser.targetRole || "-"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <h3 className="text-xl font-bold text-slate-900 mt-8">
-          Interview History
-        </h3>
-
-        <div className="grid gap-4">
-          {selectedUserInterviews.length === 0 ? (
-            <p className="text-slate-500">No interviews found for this user.</p>
-          ) : (
-            selectedUserInterviews.map((interview) => (
-              <div
-                key={interview._id}
-                className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-2"
-              >
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div>
-                    <h4 className="font-bold text-lg text-slate-900">
-                      {interview.role}
-                    </h4>
-                    <p className="text-sm text-slate-500">
-                      {interview.focusArea} • {interview.level} •{" "}
-                      {new Date(interview.date).toLocaleDateString()}
-                    </p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-sm text-slate-500 w-full">
-                      <div>
-                        <span className="block text-xs uppercase text-slate-400 font-semibold">
-                          Language
-                        </span>
-                        {interview.language || "English"}
-                      </div>
-                      <div>
-                        <span className="block text-xs uppercase text-slate-400 font-semibold">
-                          Duration
-                        </span>
-                        {interview.durationSeconds
-                          ? `${Math.round(interview.durationSeconds / 60)} mins`
-                          : "-"}
-                      </div>
-                      <div>
-                        <span className="block text-xs uppercase text-slate-400 font-semibold">
-                          Questions
-                        </span>
-                        {interview.history
-                          ? interview.history.filter((m) => m.role === "model")
-                              .length
-                          : 0}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 shrink-0">
-                    <span
-                      className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wide
-                        ${interview.status === "COMPLETED" ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}
-                    >
-                      {interview.status.replace("_", " ")}
-                    </span>
-
-                    {interview.status === "COMPLETED" && interview.feedback && (
-                      <button
-                        onClick={() => handleViewReport(interview.feedback)}
-                        className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors text-sm font-medium"
-                      >
-                        <FileText size={16} /> View Report
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => handleViewTranscript(interview._id)}
-                      disabled={transcriptLoadingId === interview._id}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm shadow-blue-200 disabled:opacity-75 disabled:cursor-not-allowed"
-                    >
-                      {transcriptLoadingId === interview._id ? (
-                        <Loader2 className="animate-spin" size={16} />
-                      ) : (
-                        <MessageSquare size={16} />
-                      )}
-                      Transcript
-                    </button>
-                  </div>
-                </div>
-                <div className="text-[11px] text-slate-400 mt-2">
-                  ID: {interview._id}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    );
+  const clearAllFilters = () => {
+    setProctoredFilters({
+      statuses: [],
+      roles: [],
+      experience: [],
+      minScore: null,
+      maxScore: null,
+      date: null,
+    });
+    setProctoredPage(1);
   };
 
   return (
@@ -876,11 +353,58 @@ const AdminDashboard = () => {
                 Last updated: {new Date().toLocaleTimeString()}
               </span>
             </div>
-            {renderStats()}
-            {renderUserList()}
+            <DashboardStats stats={stats} userGrowth={userGrowth} />
+            <UserListTable
+              users={users}
+              loading={loading}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              page={page}
+              setPage={setPage}
+              totalPages={totalPages}
+              visiblePageStart={visiblePageStart}
+              setVisiblePageStart={setVisiblePageStart}
+              handleUserView={handleUserView}
+            />
+
+            <ProctoredInterviewsStats proctoredStats={proctoredStats} />
+
+            <ProctoredInterviewsTable
+              proctoredTotal={proctoredTotal}
+              proctoredSearch={proctoredSearch}
+              setProctoredSearch={setProctoredSearch}
+              filterRef={filterRef}
+              proctoredFilters={proctoredFilters}
+              setProctoredFilters={setProctoredFilters}
+              proctoredPage={proctoredPage}
+              setProctoredPage={setProctoredPage}
+              openFilterDropdown={openFilterDropdown}
+              setOpenFilterDropdown={setOpenFilterDropdown}
+              availableRoles={availableRoles}
+              clearAllFilters={clearAllFilters}
+              hasActiveFilters={hasActiveFilters}
+              proctoredLoading={proctoredLoading}
+              proctoredInterviews={proctoredInterviews}
+              handleOpenResume={handleOpenResume}
+              setVideoModal={setVideoModal}
+              navigate={navigate}
+              proctoredTotalPages={proctoredTotalPages}
+            />
+
+            <ResumeViewerModal
+              resumeModal={resumeModal}
+              setResumeModal={setResumeModal}
+            />
           </>
         ) : (
-          renderUserDetails()
+          <UserDetailsView
+            selectedUser={selectedUser}
+            selectedUserInterviews={selectedUserInterviews}
+            setSearchParams={setSearchParams}
+            handleViewReport={handleViewReport}
+            handleViewTranscript={handleViewTranscript}
+            transcriptLoadingId={transcriptLoadingId}
+          />
         )}
       </main>
 
@@ -889,6 +413,12 @@ const AdminDashboard = () => {
         onClose={() => setIsTranscriptModalOpen(false)}
         interview={selectedInterviewDetails}
         isLoading={!!transcriptLoadingId}
+      />
+
+      <VideoPlayerModal
+        open={videoModal.open}
+        onClose={() => setVideoModal({ open: false, interview: null })}
+        interview={videoModal.interview}
       />
     </div>
   );

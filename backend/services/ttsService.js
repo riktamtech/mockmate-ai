@@ -1,17 +1,28 @@
 /**
- * TTS Service — High-performance Edge TTS with connection pooling,
- * sentence splitting, parallel synthesis, LRU caching, and concurrency control.
+ * TTS Service — Multi-engine TTS with automatic fallback chain.
  *
- * Designed to handle 100–300 concurrent interview sessions with <0.5s first-audio latency.
+ * Priority chain (controlled by AppConfig flags):
+ *   1. Edge TTS   (node-edge-tts) — High quality, neural voices
+ *   2. Google TTS (google-tts-api) — Free, fast, multi-language
+ *   3. Web Speech API — Client-side (signaled back to frontend)
+ *   4. Gemini TTS — Client-side (signaled back to frontend)
+ *
+ * When a backend engine fails, its flag is auto-disabled and the next engine
+ * takes over with immediate effect for all subsequent requests.
  */
 
 const { EdgeTTS } = require("node-edge-tts");
+const googleTTS = require("google-tts-api");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const crypto = require("crypto");
 
-const VOICE_MAP = {
+const configService = require("./configService");
+
+// ─── Voice Maps ─────────────────────────────────────────────────────────────────
+
+const EDGE_VOICE_MAP = {
   English: "en-US-JennyNeural",
   Spanish: "es-ES-ElviraNeural",
   French: "fr-FR-DeniseNeural",
@@ -22,10 +33,22 @@ const VOICE_MAP = {
   Portuguese: "pt-BR-FranciscaNeural",
 };
 
+// Google TTS language codes — maps our language names to BCP-47 codes
+const GOOGLE_LANG_MAP = {
+  English: "en",
+  Spanish: "es",
+  French: "fr",
+  German: "de",
+  Hindi: "hi",
+  Mandarin: "zh-CN",
+  Japanese: "ja",
+  Portuguese: "pt",
+};
+
 // ─── Configuration ──────────────────────────────────────────────────────────────
 
 const CONFIG = {
-  voice: VOICE_MAP["English"] || "en-US-AvaMultilingualNeural",
+  voice: EDGE_VOICE_MAP["English"] || "en-US-AvaMultilingualNeural",
   // voice: "en-US-AriaNeural", // Clear, professional female voice
   // voice: "en-US-AvaNeural", // Other choices
   // voice: "en-US-JennyNeural",
@@ -158,8 +181,7 @@ class TTSPool {
    * Used when pool is exhausted or using a non-default language voice.
    */
   static createFresh(language = "English") {
-    const voice = VOICE_MAP[language] || CONFIG.voice;
-
+    const voice = EDGE_VOICE_MAP[language] || CONFIG.voice;
     return new EdgeTTS({
       voice,
       rate: CONFIG.rate,
@@ -221,23 +243,16 @@ function splitSentences(text) {
   return sentences;
 }
 
-// ─── Single Sentence Synthesis ──────────────────────────────────────────────────
+// ─── Engine 1: Edge TTS Synthesis ───────────────────────────────────────────────
 
-/**
- * Synthesize a single sentence to MP3 buffer.
- * Uses pool instance, semaphore for concurrency, and cache for dedup.
- */
-async function synthesizeSentence(
+async function synthesizeSentenceEdge(
   sentence,
   retryCount = 0,
   language = "English",
 ) {
-  // Check cache first
-  const cacheKey = `${language}_${sentence.trim().toLowerCase()}`;
+  const cacheKey = `edge_${language}_${sentence.trim().toLowerCase()}`;
   const cached = audioCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
+  if (cached) return cached;
 
   await concurrencySemaphore.acquire();
   let poolInstance = null;
@@ -286,13 +301,13 @@ async function synthesizeSentence(
     // Retry once on transient failures (WebSocket drops, etc.)
     if (retryCount < 1) {
       console.warn(
-        `[TTS] Sentence synthesis failed, retrying (attempt ${retryCount + 1}): "${sentence.substring(0, 40)}..."`,
+        `[TTS:Edge] Sentence synthesis failed, retrying (attempt ${retryCount + 1}): "${sentence.substring(0, 40)}..."`,
       );
       // Release resources before retry — flag prevents double-release in finally
       retrying = true;
       concurrencySemaphore.release();
       if (poolInstance && !usedFresh) ttsPool.release(poolInstance);
-      return synthesizeSentence(sentence, retryCount + 1, language);
+      return synthesizeSentenceEdge(sentence, retryCount + 1, language);
     }
     throw err;
   } finally {
@@ -305,35 +320,148 @@ async function synthesizeSentence(
   }
 }
 
+// ─── Engine 2: Google TTS Synthesis ─────────────────────────────────────────────
+
+/**
+ * Synthesize a single sentence using Google Translate TTS.
+ * Free, no auth, ~200ms latency, multi-language.
+ */
+async function synthesizeSentenceGoogle(sentence, language = "English") {
+  const cacheKey = `google_${language}_${sentence.trim().toLowerCase()}`;
+  const cached = audioCache.get(cacheKey);
+  if (cached) return cached;
+
+  const langCode = GOOGLE_LANG_MAP[language] || "en";
+
+  try {
+    // getAllAudioBase64 handles splitting for long texts automatically
+    const results = await googleTTS.getAllAudioBase64(sentence, {
+      lang: langCode,
+      slow: false,
+      host: "https://translate.google.com",
+      timeout: 5000,
+    });
+
+    // Combine all base64 chunks into a single buffer
+    const buffers = results.map((result) =>
+      Buffer.from(result.base64, "base64"),
+    );
+    const mp3Buffer = Buffer.concat(buffers);
+
+    if (mp3Buffer && mp3Buffer.length > 0) {
+      audioCache.set(cacheKey, mp3Buffer);
+    }
+
+    return mp3Buffer;
+  } catch (err) {
+    console.error(
+      `[TTS:Google] Synthesis failed for "${sentence.substring(0, 40)}...":`,
+      err.message,
+    );
+    throw err;
+  }
+}
+
+// ─── Unified Sentence Synthesis (Flag-Aware) ────────────────────────────────────
+
+/**
+ * Synthesize a sentence using the currently active TTS engine.
+ * Automatically cascades on failure.
+ *
+ * @returns {Buffer|null} MP3 buffer, or null if active engine is client-side
+ */
+async function synthesizeSentenceSafe(sentence, language = "English") {
+  const activeService = await configService.getActiveTtsService();
+
+  // If active service is client-side, signal that backend can't generate audio
+  if (configService.isClientSideService(activeService)) {
+    return null;
+  }
+
+  if (activeService === "edge-tts") {
+    try {
+      return await synthesizeSentenceEdge(sentence, 0, language);
+    } catch (err) {
+      console.error(
+        `[TTS] Edge TTS failed, cascading to google-tts: ${err.message}`,
+      );
+      // Disable edge-tts and cascade
+      await configService.disableService(
+        "edge-tts",
+        `Edge TTS synthesis error: ${err.message}`,
+      );
+
+      // Fall through to Google TTS
+      try {
+        return await synthesizeSentenceGoogle(sentence, language);
+      } catch (googleErr) {
+        console.error(
+          `[TTS] Google TTS also failed, cascading to client-side: ${googleErr.message}`,
+        );
+        await configService.disableService(
+          "google-tts",
+          `Google TTS synthesis error: ${googleErr.message}`,
+        );
+        return null; // Signal client-side fallback
+      }
+    }
+  }
+
+  if (activeService === "google-tts") {
+    try {
+      return await synthesizeSentenceGoogle(sentence, language);
+    } catch (err) {
+      console.error(
+        `[TTS] Google TTS failed, cascading to client-side: ${err.message}`,
+      );
+      await configService.disableService(
+        "google-tts",
+        `Google TTS synthesis error: ${err.message}`,
+      );
+      return null; // Signal client-side fallback
+    }
+  }
+
+  // Should not reach here, but safety net
+  return null;
+}
+
 // ─── Parallel Synthesis with Ordered Streaming ──────────────────────────────────
 
 /**
  * Synthesize all sentences in parallel, stream MP3 chunks to HTTP response
  * in original sentence order as they complete.
  *
- * Also returns the full combined buffer for S3 caching.
+ * If the active TTS engine is client-side, returns null (caller should
+ * send a JSON signal to the frontend instead).
  *
  * Binary protocol per chunk: [4-byte big-endian length][MP3 data]
  * Terminal signal: [4 bytes of 0x00000000]
  *
  * @param {string} text - Full text to synthesize
  * @param {import('express').Response} res - Express response object
- * @returns {Promise<Buffer>} The complete audio buffer
+ * @param {string} language - Language name
+ * @returns {Promise<Buffer|null>} The complete audio buffer, or null for client-side
  */
 async function streamTtsChunks(text, res, language = "English") {
+  // Check if we need to signal client-side fallback
+  const activeService = await configService.getActiveTtsService();
+  if (configService.isClientSideService(activeService)) {
+    return null; // Caller should return JSON signal
+  }
+
   const sentences = splitSentences(text);
 
   if (sentences.length === 0) {
-    // Write terminal signal and end
     const endSignal = Buffer.alloc(4, 0);
     res.write(endSignal);
     res.end();
     return Buffer.alloc(0);
   }
 
-  // Launch all sentences in parallel
+  // Launch all sentences in parallel using the flag-aware synthesizer
   const synthesisPromises = sentences.map((sentence, index) => {
-    return synthesizeSentence(sentence, 0, language)
+    return synthesizeSentenceSafe(sentence, language)
       .then((buffer) => ({ index, buffer, error: null }))
       .catch((error) => {
         console.error(
@@ -354,7 +482,6 @@ async function streamTtsChunks(text, res, language = "English") {
     return { promise, resolve };
   });
 
-  // As each synthesis completes, store result and resolve its slot
   for (const synthPromise of synthesisPromises) {
     synthPromise.then((result) => {
       results[result.index] = result;
@@ -363,6 +490,7 @@ async function streamTtsChunks(text, res, language = "English") {
   }
 
   let fullAudioParts = [];
+  let hasAnyNull = false;
 
   // Stream in order
   for (let i = 0; i < sentences.length; i++) {
@@ -382,32 +510,41 @@ async function streamTtsChunks(text, res, language = "English") {
         res.write(lengthBuf);
         res.write(result.buffer);
       }
+    } else if (result && result.buffer === null) {
+      hasAnyNull = true;
     }
   }
 
-  // Write terminal signal
+  // If all sentences returned null (client-side fallback was triggered mid-stream),
+  // we still need to end the response properly
   if (!res.writableEnded) {
     const endSignal = Buffer.alloc(4, 0);
     res.write(endSignal);
     res.end();
   }
 
+  if (hasAnyNull && fullAudioParts.length === 0) {
+    return null; // All sentences needed client-side fallback
+  }
+
   return Buffer.concat(fullAudioParts);
 }
 
 /**
- * Synthesize full text to a single MP3 buffer (non-streaming alternative).
- * Useful for fallback or simpler use cases.
- *
- * @param {string} text - Full text to synthesize
- * @returns {Promise<Buffer>} - Complete MP3 buffer
+ * Synthesize full text to a single MP3 buffer (non-streaming).
+ * Returns null if active engine is client-side.
  */
 async function synthesizeFull(text, language = "English") {
+  const activeService = await configService.getActiveTtsService();
+  if (configService.isClientSideService(activeService)) {
+    return null;
+  }
+
   const sentences = splitSentences(text);
   if (sentences.length === 0) return Buffer.alloc(0);
 
   const results = await Promise.allSettled(
-    sentences.map((s) => synthesizeSentence(s, 0, language)),
+    sentences.map((s) => synthesizeSentenceSafe(s, language)),
   );
 
   const buffers = [];
@@ -426,13 +563,16 @@ async function synthesizeFull(text, language = "English") {
     }
   });
 
+  if (buffers.length === 0) return null;
   return Buffer.concat(buffers);
 }
 
 // ─── Health / Stats ─────────────────────────────────────────────────────────────
 
-function getStats() {
+async function getStats() {
+  const activeService = await configService.getActiveTtsService();
   return {
+    activeService,
     cacheSize: audioCache.size,
     cacheMaxSize: CONFIG.cacheMaxEntries,
     poolSize: CONFIG.poolSize,
@@ -445,7 +585,9 @@ function getStats() {
 
 module.exports = {
   streamTtsChunks,
-  synthesizeSentence,
+  synthesizeSentenceSafe,
+  synthesizeSentenceEdge,
+  synthesizeSentenceGoogle,
   synthesizeFull,
   splitSentences,
   getStats,

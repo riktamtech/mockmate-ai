@@ -404,6 +404,22 @@ export const api = {
     return data;
   },
 
+  classifyRole: async (role, experience) => {
+    const { data } = await axiosInstance.post("/api/ai/classify-role", {
+      role,
+      experience,
+    });
+    return data;
+  },
+
+  suggestRoles: async (profileData) => {
+    const { data } = await axiosInstance.post(
+      "/api/ai/suggest-roles",
+      profileData,
+    );
+    return data;
+  },
+
   ttsStream: async (
     text,
     interviewId = null,
@@ -434,5 +450,155 @@ export const api = {
       signal,
     });
     return response;
+  },
+
+  // ── Proctored Interview APIs ────────────────────────────────────────────
+
+  getProctoredStatus: async () => {
+    const { data } = await axiosInstance.get("/api/proctored/status");
+    return data;
+  },
+
+  saveConsent: async (signature) => {
+    const { data } = await axiosInstance.post("/api/proctored/consent", {
+      signature,
+    });
+    return data;
+  },
+
+  findOrCreateOpening: async (details) => {
+    const { data } = await axiosInstance.post(
+      "/api/proctored/find-or-create-opening",
+      details,
+    );
+    return data;
+  },
+
+  createProctoredCandidate: async (candidateData) => {
+    const { data } = await axiosInstance.post(
+      "/api/proctored/create-candidate",
+      candidateData,
+    );
+    return data;
+  },
+
+  scheduleProctoredInterview: async (scheduleData) => {
+    const { data } = await axiosInstance.post(
+      "/api/proctored/schedule",
+      scheduleData,
+    );
+    return data;
+  },
+
+  cancelProctoredInterview: async (reason = "") => {
+    const { data } = await axiosInstance.post("/api/proctored/cancel", {
+      reason,
+    });
+    return data;
+  },
+
+  rescheduleProctoredInterview: async (scheduleData) => {
+    const { data } = await axiosInstance.post(
+      "/api/proctored/reschedule",
+      scheduleData,
+    );
+    return data;
+  },
+
+  getProctoredReport: async () => {
+    const { data } = await axiosInstance.get("/api/proctored/report");
+    return data;
+  },
+
+  saveProctoredProgress: async (progressData) => {
+    const { data } = await axiosInstance.post(
+      "/api/proctored/save-progress",
+      progressData,
+    );
+    return data;
+  },
+
+  startOverProctored: async (payload = {}) => {
+    const { data } = await axiosInstance.post(
+      "/api/proctored/start-over",
+      payload,
+    );
+    return data;
+  },
+
+  markProctoredInProgress: async () => {
+    const { data } = await axiosInstance.post(
+      "/api/proctored/mark-in-progress",
+    );
+    return data;
+  },
+
+  checkProctoredCompletion: async () => {
+    const { data } = await axiosInstance.post(
+      "/api/proctored/check-completion",
+    );
+    return data;
+  },
+
+  resumeProctoredInterview: async () => {
+    const { data } = await axiosInstance.post(
+      "/api/proctored/resume-interview",
+    );
+    return data;
+  },
+
+  resetProctoredSession: async () => {
+    const { data } = await axiosInstance.post(
+      "/api/proctored/reset-session",
+    );
+    return data;
+  },
+
+  getAdminProctoredInterviews: async (
+    page = 1,
+    limit = 10,
+    search = "",
+    status = "all",
+    filters = {},
+  ) => {
+    const params = { page, limit, search, status };
+    if (filters.role) params.role = filters.role;
+    if (filters.experience) params.experience = filters.experience;
+    if (filters.minScore != null) params.minScore = filters.minScore;
+    if (filters.maxScore != null) params.maxScore = filters.maxScore;
+    if (filters.date) params.date = filters.date;
+    const { data } = await axiosInstance.get("/api/proctored/admin/all", {
+      params,
+    });
+    return data;
+  },
+
+  getAdminProctoredStats: async () => {
+    const { data } = await axiosInstance.get("/api/proctored/admin/stats");
+    return data;
+  },
+
+  getAdminProctoredRoles: async () => {
+    const { data } = await axiosInstance.get("/api/proctored/admin/roles");
+    return data;
+  },
+
+  getAdminProctoredDetail: async (id) => {
+    const { data } = await axiosInstance.get(`/api/proctored/admin/${id}`);
+    return data;
+  },
+
+  getAdminProctoredResumeUrl: async (id, download = false) => {
+    const { data } = await axiosInstance.get(
+      `/api/proctored/admin/${id}/resume${download ? "?download=true" : ""}`,
+    );
+    return data;
+  },
+
+  getAdminProctoredRecordingUrls: async (id) => {
+    const { data } = await axiosInstance.get(
+      `/api/proctored/admin/${id}/recording-urls`,
+    );
+    return data;
   },
 };

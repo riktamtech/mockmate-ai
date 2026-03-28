@@ -44,6 +44,21 @@ const blobToBase64 = (blob) => {
   });
 };
 
+const DEFAULT_ROLE_SUGGESTIONS = [
+  "Frontend Developer",
+  "Backend Developer",
+  "Full Stack Developer",
+  "React Developer",
+  "Node.js Developer",
+  "DevOps Engineer",
+  "Data Scientist",
+  "Product Manager",
+  "UI/UX Designer",
+  "QA Engineer",
+  "Mobile Developer",
+  "Cloud Architect",
+];
+
 export const CandidateSession = () => {
   const {
     appState,
@@ -54,6 +69,7 @@ export const CandidateSession = () => {
     interviewConfig,
     setInterviewConfig,
     resetSession,
+    user,
   } = useAppStore();
 
   const navigate = useNavigate();
@@ -69,8 +85,10 @@ export const CandidateSession = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [autoStartCountdown, setAutoStartCountdown] = useState(null);
+  const [roleSuggestions, setRoleSuggestions] = useState(DEFAULT_ROLE_SUGGESTIONS);
   const startTimeRef = useRef(Date.now());
   const autoStartTimerRef = useRef(null);
+  const fetchedRolesForUserId = useRef(null);
 
   const chatSessionRef = useRef(null);
 
@@ -97,6 +115,52 @@ export const CandidateSession = () => {
       }
     };
   }, [autoStartCountdown]);
+
+  // Reset role suggestions ref on logout so they re-fetch on re-login
+  useEffect(() => {
+    if (!user) {
+      fetchedRolesForUserId.current = null;
+      setRoleSuggestions(DEFAULT_ROLE_SUGGESTIONS);
+    }
+  }, [user]);
+
+  // Fetch AI-powered role suggestions based on user profile
+  useEffect(() => {
+    if (!user || fetchedRolesForUserId.current === user._id) return;
+
+    const hasProfile =
+      user.currentRole?.trim() ||
+      user.targetRole?.trim() ||
+      user.skills?.length > 0;
+
+    if (!hasProfile) return; // No profile data, keep defaults
+
+    fetchedRolesForUserId.current = user._id;
+
+    const defaultLower = new Set(
+      DEFAULT_ROLE_SUGGESTIONS.map((r) => r.toLowerCase()),
+    );
+
+    api
+      .suggestRoles({
+        currentRole: user.currentRole,
+        targetRole: user.targetRole,
+        skills: user.skills,
+        experienceLevel: user.experienceLevel,
+        yearsOfExperience: user.yearsOfExperience,
+      })
+      .then((result) => {
+        if (result.suggestedRoles?.length > 0) {
+          const newRoles = result.suggestedRoles.filter(
+            (r) => !defaultLower.has(r.toLowerCase()),
+          );
+          setRoleSuggestions((prev) => [...newRoles, ...prev]);
+        }
+      })
+      .catch((err) => {
+        console.warn("AI role suggestions failed, using defaults:", err);
+      });
+  }, [user]);
 
   useEffect(() => {
     const initSession = async () => {
@@ -348,24 +412,12 @@ export const CandidateSession = () => {
       lowerMessage.includes("practicing for") ||
       lowerMessage.includes("interviewing for")
     ) {
-      newSuggestions.push(
-        {
-          label: "Frontend Developer",
-          value: "I want to practice for a Frontend Developer role.",
-        },
-        {
-          label: "Backend Developer",
-          value: "I want to practice for a Backend Developer role.",
-        },
-        {
-          label: "Full-Stack Developer",
-          value: "I want to practice for a Full-Stack Developer role.",
-        },
-        {
-          label: "Software Engineer",
-          value: "I want to practice for a Software Engineer role.",
-        },
-      );
+      roleSuggestions.forEach((role) => {
+        newSuggestions.push({
+          label: role,
+          value: `I want to practice for a ${role} role.`,
+        });
+      });
     } else if (
       lowerMessage.includes("focus area") ||
       lowerMessage.includes("tech stack") ||

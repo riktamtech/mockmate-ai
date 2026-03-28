@@ -7,6 +7,8 @@ const {
   analyzeResume,
   generateSpeechGemini,
   refreshAudioUrl,
+  classifyRole,
+  suggestRoles,
 } = require("../controllers/aiController");
 const { protect } = require("../middleware/authMiddleware");
 
@@ -18,5 +20,7 @@ router.post("/tts", protect, generateSpeechStream);
 router.post("/analyze-resume", protect, analyzeResume);
 router.post("/tts-gemini-backup", protect, generateSpeechGemini);
 router.post("/refresh-audio-url", protect, refreshAudioUrl);
+router.post("/classify-role", protect, classifyRole);
+router.post("/suggest-roles", protect, suggestRoles);
 
 module.exports = router;
