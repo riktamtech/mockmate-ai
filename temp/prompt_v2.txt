@@ -1,0 +1,180 @@
+Context
+You are operating inside the Antigravity workspace. The following repositories are in scope: @Zinterview-backend, @Zinterview-frontend, @mockmate-ai, @interview-ui. Read @prompt.txt for the baseline Zinterview ↔ mockmate-ai integration flow before proceeding. All new requirements described below supersede or extend that baseline.
+
+Objective
+Produce a robust, fully analytical implementation plan (no code, no file changes) for the upgraded Zinterview ↔ mockmate-ai Job Openings integration. The plan must cover: execution strategy, approach reasoning, alternatives analysis, cost/latency/optimisation tradeoffs, edge case handling, and blocker mitigation. Additionally, produce a standalone prototype simulation prompt (separate section, saved as a new .txt file) for Google AI Studio / Lovable to build a full UI/UX prototype of the entire flow.
+
+Constraints
+
+ZERO code. ZERO file modifications. Plan and prompt only.
+All features must be implemented as feature flags — togglable via a single flag switch — across @Zinterview-backend, @Zinterview-frontend, @mockmate-ai, @interview-ui.
+All @mockmate-ai UI must be fully responsive across all screen sizes.
+Maintain industry-standard file/folder structure in @mockmate-ai as it scales.
+Apply: SOLID principles, appropriate design patterns, production-grade best practices.
+Seamlessly match existing architectural patterns, styling conventions, and file structures of each repository.
+Apply across @mockmate-ai:
+
+Frontend: React optimisation (memoization, code splitting, lazy loading, virtualization), CSS optimisation (critical CSS, purging, containment), animation/JS optimisation (RAF, will-change, debounce/throttle).
+API design: RESTful best practices, versioning, consistent error contracts.
+DB: Query optimisation, indexing strategy, N+1 prevention.
+Caching: Multi-layer caching strategy (in-memory, Redis/CDN where applicable).
+DSA: Optimal data structures for ranking, scoring, filtering, union operations on interview results.
+System design: Scalable, decoupled architecture leveraging in-depth system design principles.
+
+
+
+
+Requirements to Plan
+1 — Job Application Flow with Centralised Zinterview Resume
+1A — First-Time Applicant (No Prior Proctored Interview)
+
+On "Apply" click for a Zinterview-published job opening in @mockmate-ai:
+
+Parse job description → calculate Resume Fitness Score against candidate resume → display score with gap analysis (skills lacking).
+Prompt candidate to confirm readiness before committing to an AI Proctored Interview.
+Generate a job-tailored Proctored Interview: skill-set driven, resume-informed, behavioural questions disabled (technical only).
+On interview completion: do not reveal scores; surface only improvement suggestions.
+Auto-submit application to the selected opening.
+
+
+
+1B — Repeat Applicant (Prior Interview Exists, Applying to Similar/Different Role)
+
+Compare new opening's skill requirements against the standardised skill set of the candidate's most recent/relevant Proctored Interview.
+If gap skills exist → present candidate with 2 options:
+
+Option A: Proceed to apply as-is (application submitted immediately).
+Option B: Take a short add-on Proctored Interview covering only the gap skills (encourage with profile value / recruiter attention messaging).
+
+
+Add-on interview results must be unioned into the existing Centralised Zinterview Resume (best score per skill wins; new skills appended).
+
+1C — Centralised Zinterview Resume (Per-User, Cumulative)
+
+Sections: Skill Ratings, Technical Strengths, Weaknesses, Experience, Interview Recordings, and extensible metadata.
+Union strategy: for overlapping skills across interviews, retain highest achieved score.
+Must be queryable by Zinterview recruiters.
+All raw interview records (per-interview: config, questions, answers, evaluations, recordings, transcripts) stored immutably in @mockmate-ai DB — never overwritten.
+
+
+2 — Proctored Interview Overhaul in @mockmate-ai
+
+Remove the 1-interview-per-account restriction.
+Implement a INTERVIEW_LIMIT_ENABLED flag (boolean) + MAX_INTERVIEW_COUNT (integer). Default: flag false (unlimited). When true, enforce MAX_INTERVIEW_COUNT.
+On nth interview attempt: show all previous interview configurations so candidate can reuse or modify.
+Question deduplication: when interviewing on same skills again, maximally avoid previously asked questions (track question history per skill per candidate).
+Storage model:
+
+Centralised Zinterview Resume (cumulative, best-score union, as above).
+Per-interview immutable records (config, Q&A, evaluation, recording) — never update, always insert.
+
+
+Zinterview API collision handling: when Zinterview API rejects duplicate candidate creation for same openingId, update the Zinterview-side record (single source for Zinterview), but always insert a new immutable record in @mockmate-ai DB.
+Candidates can view all their individual interview reports in full detail (existing report view UI, extended).
+
+
+3 — Recruiter: Global Candidate Pool in @Zinterview-frontend
+
+New dedicated tab: Candidate Pool (organisation-wide, across all openings).
+Features:
+
+Advanced filters: skill ratings, ranking, interview score ranges, experience, role applied, date applied, interview status.
+Sorting: multi-column, with DSA-backed ranking algorithm.
+Table view: scores, skill sets, ratings, experience, match %, opening applied.
+Detail view: full Centralised Zinterview Resume, per-skill performance breakdown, interview transcripts, recordings.
+
+
+Recruiter should be able to shortlist, tag, and take actions on candidates from this view.
+
+
+4 — Per-Opening: mockmate-ai Applications Sub-Section in @Zinterview-frontend
+
+Within each job opening's existing candidate management UI, add a dedicated "mockmate-ai Applications" sub-tab.
+Recruiter can schedule a follow-up interview for any mockmate-ai applicant:
+
+Allow extra customisation: additional questions, modified parameters on top of existing opening config.
+Scheduling flow must match the current Zinterview interview scheduling flow exactly.
+
+
+
+
+5 — Notifications & Events Sync
+
+All Zinterview-scheduled interviews → push to @mockmate-ai via:
+
+In-app notifications (real-time).
+Email.
+Phone/SMS.
+
+
+All interviews (scheduled from Zinterview by recruiter, or self-scheduled from @mockmate-ai by candidate):
+
+Upcoming → appear in @mockmate-ai Upcoming Events section.
+Completed → move to Past Events.
+
+
+
+
+Implementation Plan Requirements
+For each of the 5 requirement areas above, the plan must cover:
+
+Approach & Reasoning — chosen strategy and why.
+Alternatives Considered — at least 2 alternatives per decision point, with tradeoff analysis.
+Best Approach Verdict — explicit recommendation with justification.
+Cost & Latency Analysis — compute/storage/API call costs, latency estimates, bottlenecks.
+Optimisation Techniques — caching, indexing, batching, lazy evaluation, queue-based async processing.
+Edge Cases — enumerate all non-happy-path scenarios and mitigation strategy for each.
+Blockers & Mitigations — Zinterview API constraints, data consistency risks, race conditions, partial failures.
+Feature Flag Integration — how each feature is flagged and toggled across all 4 repositories.
+System Design Considerations — scalability, decoupling, event-driven patterns, data flow diagrams (described textually).
+DSA Choices — data structures and algorithms chosen for ranking, scoring union, deduplication, filtering.
+
+
+Prototype Simulation Prompt (Separate Deliverable)
+After the implementation plan, create a new .txt file containing a standalone, fully self-contained prompt for Google AI Studio / Lovable to build a high-fidelity UI prototype. This prompt must:
+
+Require zero prior context — all flow, screen, and data details must be embedded inline.
+Cover every screen and state for:
+
+@Zinterview-frontend: Job Openings list, Opening detail, Candidates inside opening, mockmate-ai Applications sub-tab, Schedule Interview from mockmate pool, Global Candidate Pool tab with filters/sort/table/detail view, Centralised Zinterview Resume modal, Interview transcripts & recordings view.
+@mockmate-ai: Job Openings discovery page, Job Detail + Resume Fitness Score screen, Interview readiness confirmation screen, Proctored Interview configuration (with previous config selector for repeat users), Proctored Interview in-progress screen, Post-interview improvement suggestions screen (no scores shown), Gap skill comparison screen (Option A / Option B), Add-on interview flow, Applications dashboard, Centralised Zinterview Resume personal view, Upcoming & Past Events/interviews section, In-app notifications panel, Individual interview report detail view.
+
+
+Specify: modern, clean, professional design language; smooth micro-animations; mobile-first responsive; impressive enough to wow a client stakeholder.
+Include layout descriptions, component hierarchy, data displayed per screen, interaction states (loading, empty, error, success), and transition flows between screens.
+Explicitly state: this is a prototype simulation — use realistic mock data throughout.
+Be token-efficient: structured, no fluff, maximum signal. Use numbered sections and bullet sub-points.
+
+
+
+
+
+
+
+Raw Explanation of Requirements of the above prompt:
+
+Raw Task Requirements to Convert:
+Goal: To leverage showing the Job Openings from Zinterview in the mockmate-ai, where candidates should be able to apply for the jobs, give AI interviews, stay updated via notifications, etc.
+
+Flow & Explanation:
+In @prompt.txt, we have the entire explanation of the flow regarding the integration of the Job Openings between the Zinterview and the mockmate-ai.
+
+Now the client's way of thought process and approach got changes. The client wants to see the UI flow and designs according to the changes to the application flow from mockmate and several other changes. Please understand the following upgraded flow properly. After completely understanding I want you to just give me the robust implementation plan on how to implement or execution the flow, how to tackle the blockers, how to handle different edge cases, etc.
+
+**Note: I strictly want you not to code anything or don't make any changes any where.
+
+Also along with the in-detail implementation plan, I want the reasoning for choosing the particular approach or way, other alternatives, what is the best one, costs that will take, latency, optimisation techniques, etc everything analytically so that I want to see each and every possiblity on the implementation approach.
+
+Apart from the implementation plan, I want you to create a new text file and write a proper fully structured, less token consuming prompt that I can give to the Google AI studio and Lovable to simulate the entire flow that is going to be implemented regarding the Job Openings. I want you to mention every small detail in the prompt so that I can just build a conceptual prototype of the Zinterview and mockmate-ai flow. I want to replicate all the UI of Zinterview frontend related to job openings, candidates inside openings, interviews, different options in candidates page for an opening, candidate pool from mockmate, etc. And from mockmate-ai I want to simulate Job Openings, Applications, Dashboard, Proctored Interview, Application flow related screens, etc. Make sure the prompt covers each and everything mentioned in detail so that the Lovable and Google AI studio builds the entire flow ensuring smooth and atmost attractive UI. The clients should be impressed extremely with the Prototype of UI design and flow we provide.
+
+Now I'll give you the proper explanation on the upgrades of the previous approach as per the implementation of  @prompt.txt.
+In the new updated requirements by client they are expecting following things.
+1. When a user tries to apply for a job published by recruiter from Zinterview to the mockmate-ai, the first step needed is to ask user to take a Proctored Interview(In the similar way Proctored Interview is currently implemented in mockmate-ai). Lets say the user is new to the platform and is applying for their first job and no proctored interview has been taken by the candidate via mockmate-ai. In this case we need to go through the job description of the opening to which the user clicked to Apply. First calculate the fitness score of the resume and show them their scores, where they are lacking. Because next step will be an AI proctored interview and we need to say to the user the same to confirm if they realy have all the skills to clear the interview, then only giving interview would be better. If candidate is not confident then it is unnecessary to take an interview. Now accordingly candidate should give an interview based on the skill set requirements of the job and a bit on resume basis. The interview should cover all the important skills required for the role. Because this evaluation will be crucial while recommending any profile to Zinterview client. We need to disable behavioural questions for all these interviews from mockmate-ai, keeping only technical aspects in the consideration. Once after the candidate completes the interview, we should not show the report to the candidate directly. Becuase its not correct to expose scores at this stage. We can just suggest some improvements they can do for next rounds. Candidate's application should be automatically submitted to the opening they selected previously once the interview gets finished. Next case is like, the same candidate is applying for a similar role in other organisation. Some important skills needed for this other job openings were not covered in the previous interview. Now in this case, along with resume fitness score, we need to compare the current opening requirements with the standardised requirements to which the candidate previously gave the interview. After the comparison and conclusion, if there are any set of skills missing which are important requirements for the company,  in such case the candidate will have 2 options. The candidate can just simply proceed to apply like that and the application process should be successful. Or else we need to encourage candidate to take a short Proctored interview for the remaining set of skills missing saying that this would improve their profile value, recruiter attention, etc. This interview from mockmate-ai again should be an add-on for the previous interview results. As new skills will be tested out in the new interview we need to add these new skills and other report details to the previous one. So this is a basic overview on how the job opening application flow should work on the mockmate-ai side. Basically we need to create a centralised custom Zinterview Resume that should be built per user, based on their interview performances. This centralised Zinterview Resume must have several sections such as, especially Skill ratings,  Technical strengths, weaknesses, Experience, interview recordings, and many more. As the user keeps giving the interviews on the new skills, we need to union the results and keep adding them to centralised Zinterview resume and keep on improving it. If the candidate chooses to give the interview for the same skills again, then the highest achieved scores per skills of overall interviews should be considered to keep in the centralised interview. All the interview details, evaluations, and all other details should be keeping on stored in the mockmate-ai databse also properly.
+
+2. Currently in the @mockmate-ai the Proctored Interview feature enables candidate to configure and take an AI proctored interview from the mockmate-ai platform. Currently any candidate can give upto only 1 interview per account. But now I want to remove that restriction and allow the user to take as many interviews as they like. Actually while implementing it maintain a flag and a maximum allowed number. If flag is true then we need to allow only certain number of interviews, else unlimited. Currently keep the flag defaultly as falso. After the candidates come to our platform gets used to it and then we will start chargin them. And when implementing that I'll use the flag and maximum allowance properly. So in the proctored interview of mockmate-ai, when the user tries to give the interview for second or nth time, we need to initially show him all the previous interview configurations so that they can select any same configuration if they want and give the interview for same again. But whenever and wherever the user is trying to give interview on same skills again we need to make sure to not ask the repeated questions as much as possible. We need to give the user a fresh experience every time. In mockmate-ai the reports and interview records need to stored in 2 ways. First maintain a centralised Zinterview Resume, the same one previously mentioned. If one is already there, then keep on appending to it doing union, choosing the best results out of all tries for the same skill sets, etc. Also the records, history, interviews, interview recordings, evaluations and all should be store per interview separately in the mockmate-ai. When the candidate tries to give the interview for the same configuration again in Proctored Interview, the Zinterview APIs fail if we try to create a candidate again in that opening. So we need to update the candidate record and the respective interview report also in the zinterview database. This updates the previous interview report of that user for that openingId which makes the previous interviews records vanish. That's why we need to store all the interview reports for each and every interview even for same opening in the mockmate-ai backend without any updations to a single record. We need to maintain all records. When the candidate tries to apply to any job opening and the Proctored Interview has been already given we need to do the same comparison and go with the flow of either proceeding with application or take interview for remaining skills and so. The user should be able to view all the reports in detail as it is now for the Proctored Interviews given irrespective of any job openings.
+
+3. Now coming to the Zinterview-frontend on the recruiter side, the recruiter/admin should be able see the pool of candidates applied for different roles in their organisation in a separate tab. We need to implement different kind of filters, sortings based on skill ratings, rankings, interview scores, experiences and various other factors. We need to should the recruiter the centralised Zinterview resume with all the details about the candidate, their performance in interviews for different skills, and all. This will be showed in the detailed view. In the tabular view, show the scores, skill sets, ratings, experiences, and many more fields. The recruiter should be able to see the interview transcripts, recordings, etc.
+
+4. Along with the separate section in Zinterview frontend for overall applications, in each openings we need to have a section for the applications from mockmate-ai separately. The recruiter should be able to conduct an interview again for any candidate from applications if they wanted giving some extra customisations or questions along with the one existing in the job opening data. The scheduling of interview flow should be same as the current one in the Zinterview.
+
+5. The schedules interviews and all should be notified to mockmate-ai via in-app notifications along with the mail and phone number. All interviews scheduled from Zinterview by recruiter or candidate himself from the mockmate-ai should be added to the upcoming events section in the mockmate-ai. And the finished interviews should be in past events.

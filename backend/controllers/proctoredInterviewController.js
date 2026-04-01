@@ -25,6 +25,7 @@ const {
 } = require("../services/openingMatcherService");
 const crypto = require("crypto");
 const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { enrichFromInterview } = require("../services/centralisedResumeService");
 
 // ── Timezone-aware ISO string helper ─────────────────────────────────────
 
@@ -114,7 +115,22 @@ const getStatus = asyncHandler(async (req, res) => {
     .populate("candidate", CANDIDATE_PROJECTION);
 
   if (!interview) {
-    return res.json({ interview: null });
+    return res.json({ interview: null, canStartNew: true, interviewCount: 0 });
+  }
+
+  // Include interview count and ability to start new
+  const totalCompleted = await ProctoredInterview.countDocuments({
+    user: req.user._id,
+    status: "COMPLETED",
+  });
+
+  let canStartNew = interview.status === "COMPLETED";
+
+  // Check interview limit if enabled
+  const configService = require("../services/configService");
+  const appConfig = await configService.getConfig();
+  if (appConfig.INTERVIEW_LIMIT_ENABLED && totalCompleted >= appConfig.MAX_INTERVIEWS_ALLOWED) {
+    canStartNew = false;
   }
 
   // If the interview is IN_PROGRESS and we haven't fetched the final report yet,
@@ -300,7 +316,7 @@ const getStatus = asyncHandler(async (req, res) => {
   // Include evaluationPending flag so frontend knows whether to keep polling
   const evaluationPending =
     interview.status === "COMPLETED" && !interview.evaluation;
-  res.json({ interview, evaluationPending });
+  res.json({ interview, evaluationPending, canStartNew, interviewCount: totalCompleted });
 });
 
 /**
@@ -1530,6 +1546,11 @@ const checkCompletion = asyncHandler(async (req, res) => {
         interview.reportFetched = true;
         await interview.save();
 
+        // Enrich CentralisedResume with interview results (non-blocking)
+        _triggerCentralisedResumeEnrichment(interview).catch((err) =>
+          console.error('[CentralisedResume] Enrichment failed (non-fatal):', err.message)
+        );
+
         const evaluationPending = !interview.evaluation;
         return res.json({ completed: true, interview, evaluationPending });
       }
@@ -1542,6 +1563,111 @@ const checkCompletion = asyncHandler(async (req, res) => {
 });
 
 // ── Admin endpoints ──────────────────────────────────────────────────────
+
+/**
+ * Helper: Extract interview results and enrich the CentralisedResume.
+ * Called asynchronously after an interview completes in checkCompletion.
+ */
+async function _triggerCentralisedResumeEnrichment(interview) {
+  const userId = interview.user;
+  if (!userId) return;
+
+  // Parse evaluation to extract per-skill data
+  let evalParsed = null;
+  try {
+    evalParsed = typeof interview.evaluation === "string"
+      ? JSON.parse(interview.evaluation)
+      : interview.evaluation;
+  } catch {
+    // If evaluation isn't parsable, still enrich with trust scores
+  }
+
+  const evalReport = evalParsed?.evaluation_report || {};
+  const skillEvals = evalReport?.per_skill_evaluation || evalReport?.skill_evaluations || [];
+
+  // Build skill results from evaluation
+  const skillResults = [];
+  if (Array.isArray(skillEvals)) {
+    for (const se of skillEvals) {
+      skillResults.push({
+        skillName: se.skill_name || se.skillName || "General",
+        score: se.score_percentage || se.score || 0,
+        depthLevel: _scoreToDepth(se.score_percentage || se.score || 0),
+        subTopicsCovered: se.topics_covered || se.subTopics || [],
+        questionCount: se.question_count || se.questions_asked || 0,
+      });
+    }
+  }
+
+  // Extract strengths and weaknesses from evaluation
+  const strengths = [];
+  const weaknesses = [];
+  if (evalReport.strengths && Array.isArray(evalReport.strengths)) {
+    for (const s of evalReport.strengths) {
+      strengths.push(typeof s === "string" ? s : s.area || s.description || "");
+    }
+  }
+  if (evalReport.weaknesses && Array.isArray(evalReport.weaknesses)) {
+    for (const w of evalReport.weaknesses) {
+      weaknesses.push({
+        area: typeof w === "string" ? w : w.area || w.description || "",
+        suggestion: typeof w === "object" ? w.suggestion || w.improvement || "" : "",
+      });
+    }
+  }
+
+  // Compute duration from interview times
+  let duration = 0;
+  if (interview.interviewStartTime && interview.interviewEndTime) {
+    duration = Math.round(
+      (new Date(interview.interviewEndTime) - new Date(interview.interviewStartTime)) / 60000,
+    );
+  }
+
+  // Parse cheating score
+  const cheatingLikelihood = interview.cheatingScore?.likelihood_of_cheating || 0;
+
+  await enrichFromInterview(userId, {
+    interviewId: interview._id,
+    skillResults,
+    problemSolvingScore: evalReport.problem_solving_score || evalReport.overall_score_in_percentage || 0,
+    communicationScore: _parseCommunicationScore(interview.communicationEvaluation),
+    codeQualityScore: evalReport.code_quality_score || 0,
+    trustScore: interview.trustScore || 0,
+    cheatingLikelihood,
+    recordingUrl: interview.rawReportPayload?.botRecordingUrl || "",
+    transcriptUrl: "",
+    evaluationSummary: evalReport.overall_feedback || evalReport.summary || "",
+    duration,
+    strengths,
+    weaknesses,
+  });
+}
+
+/**
+ * Helper: Map a numeric score to a depth level.
+ */
+function _scoreToDepth(score) {
+  if (score >= 85) return "EXPERT";
+  if (score >= 65) return "ADVANCED";
+  if (score >= 40) return "INTERMEDIATE";
+  return "BEGINNER";
+}
+
+/**
+ * Helper: Extract a numeric communication score from the communication evaluation string.
+ */
+function _parseCommunicationScore(commEval) {
+  if (!commEval) return 0;
+  try {
+    const parsed = typeof commEval === "string" ? JSON.parse(commEval) : commEval;
+    return parsed?.overall_communication_score || parsed?.score || 0;
+  } catch {
+    // Try to extract a number from the string
+    const match = String(commEval).match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  }
+}
 
 /**
  * Helper: safely parse evaluation JSON and extract overall score

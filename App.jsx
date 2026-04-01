@@ -54,6 +54,9 @@ const JobAnalyticsPage = React.lazy(
 const NotificationsPage = React.lazy(
   () => import("./components/notifications/NotificationsPage"),
 );
+const CentralisedResumePage = React.lazy(
+  () => import("./components/resume/CentralisedResumePage"),
+);
 
 const LazyFallback = () => {
   return (
@@ -396,6 +399,19 @@ export default function App() {
               <AppLayout>
                 <Suspense fallback={<LazyFallback />}>
                   <NotificationsPage />
+                </Suspense>
+              </AppLayout>
+            </ProtectedCandidateRoute>
+          }
+        />
+
+        <Route
+          path="/mockmate/candidate/my-resume"
+          element={
+            <ProtectedCandidateRoute>
+              <AppLayout>
+                <Suspense fallback={<LazyFallback />}>
+                  <CentralisedResumePage />
                 </Suspense>
               </AppLayout>
             </ProtectedCandidateRoute>

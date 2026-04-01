@@ -1,0 +1,66 @@
+# Zinterview × MockMate-AI: Job Openings UI Prototype Guidelines
+
+## Context & Objective
+You are a Staff Frontend UI/UX Engineer. Your core task is to build a fully interactive, production-grade UI prototype for a cross-platform integration between an enterprise recruiter tool ("Zinterview") and an AI candidate job-portal ("MockMate-AI"). 
+
+Use React and Tailwind CSS. The design MUST communicate premium, cutting-edge AI software. Employ glassmorphism, depth soft-shadows, dynamic micro-animations (via Framer Motion), and perfect mobile-first responsiveness. Fill the prototype with high-quality, realistic mock data for a "Senior Backend Engineer" role.
+
+---
+
+## Screen Inventory & Requirements
+
+### 1. @Zinterview-frontend: Job Openings List & Detail
+- **Layout:** Standard enterprise dashboard width. Sidebar navigation. High-density data grid/cards for active jobs.
+- **Data Displayed:** Job titles, metadata, candidate counts, and a glowing, visually distinct "Zinterview Verified Hiring" tag on enabled jobs.
+- **Interactions:** Hovering over a job card gently lifts it with a soft shadow. Clicking expands a detailed split-pane opening view.
+
+### 2. @Zinterview-frontend: Candidates Inside Opening & MockMate Sub-Tab
+- **Layout:** Advanced Data Table within the job opening split-pane. 
+- **Sub-Tabs:** "Standard Applicants", "MockMate AI Applications".
+- **Data Displayed:** Candidate name, AI resume fitness score (gauge 0-100), interview status.
+- **Interactions:** "Schedule Follow-up" button that opens an elegant, layered modal allowing the recruiter to add "Custom Technical Questions" before firing off the schedule invite.
+
+### 3. @Zinterview-frontend: Global Candidate Pool
+- **Layout:** Full-width, dense analytics table for recruiters to search candidates system-wide.
+- **Data Displayed:** Multi-column sortable table showing highest algorithmic rankings, aggregated skill sets, match %, and experience.
+- **Interactions:** Complex multi-select dropdown filtering. Clicking a candidate row slides out a detailed "Centralised Zinterview Resume" panel (including transcript excerpts and video thumbnail placeholders).
+
+### 4. @mockmate-ai: Job Openings Discovery
+- **Layout:** Consumer-focused, highly immersive job board. Breathtaking "Find Your Perfect Fit" hero section with animated ambient background.
+- **Data Displayed:** Job cards displaying org, role, salary, skill tags, and the "Zinterview Verified Hiring" badge.
+- **Interactions:** Clicking "Apply" triggers a cinematic, full-screen loading overlay stating: *"Analyzing your profile against this role..."* using smooth pulsing animations.
+
+### 5. @mockmate-ai: Job Detail & Fitness Score Analysis
+- **Layout:** Split view. Left pane: beautifully formatted Job Description. Right pane: Resume Fitness Score breakdown.
+- **Data Displayed:** A radar chart or concentric ring UI highlighting skills match, experience fit, and role alignment. Below it, a "Gap Analysis" detailing lacking skills.
+- **Interactions:** State-aware CTA: "Proceed to Interview" (with subtle glowing heartbeat animation) or "Apply Anyway".
+
+### 6. @mockmate-ai: Smart Application Flow (New & Returning)
+- **Layout:** Centered modal/wizard flow.
+- **Data Displayed:** If returning candidate: display **"Skill Gap Detected"**. Present 2 distinct, highly stylized path-cards:
+  - *Option A:* "Apply As-Is" (Fast track, standard submit).
+  - *Option B:* "Take Add-On Interview" (Highlighted, high-value path targeting only gap skills).
+- **Interactions:** Smooth cross-fade into simulated camera-setup UI or success confirmation based on selection.
+
+### 7. @mockmate-ai: Centralised Zinterview Resume Page
+- **Layout:** Digital portfolio/profile aesthetic with sticky navigation tabs.
+- **Data Displayed:** Cumulative AI-driven technical strengths, weaknesses, best-achieved skill percentiles, and chronological interview history.
+- **Interactions:** Tabular transitions between domains (e.g., Backend, System Design, Algorithms).
+
+### 8. @mockmate-ai: Applications Dashboard & Upcoming Events
+- **Layout:** Kanban board OR elegant grouped list showing application lifecycle statuses.
+- **Data Displayed:** Visual pipeline: Applied → AI Evaluated → Recruiter Review → Scheduled. A sidebar prominently showing "Upcoming Events".
+- **Interactions:** Clicking an upcoming event expands details on logistics and offers a "Join Session" deep-link.
+
+### 9. @mockmate-ai: In-App Notifications
+- **Layout:** Slide-out drawer or popover connected to a header bell icon.
+- **Data Displayed:** Unread dot indicators, categorized alerts (Recruiter Actions, System Updates).
+- **Interactions:** Smooth slide-in. "Mark all as read" sweeps the items with a cascade dissolve.
+
+---
+
+## Technical & Aesthetic Rules
+1. **Zero Context Needed:** Build explicitly according to the specs above. Do not ask for further design guidance.
+2. **Polished Finish:** Treat empty, loading, and error states as first-class citizens with custom illustrations or thoughtful typography.
+3. **Color Palette:** Choose either an ultra-clean "Arctic White & Slate" light mode with crisp shadows, or a "Midnight & Neon Coral/Blurple" dark mode. Validate high contrast and ADA compliance.
+4. **Token Efficiency:** Output functional code chunks grouped logically. Avoid verbose boilerplate where pure UI representation suffices.

@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:5001";
-// const API_URL = '';
+// const API_URL = "http://localhost:5001";
+const API_URL = '';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
@@ -598,6 +598,27 @@ export const api = {
   getAdminProctoredRecordingUrls: async (id) => {
     const { data } = await axiosInstance.get(
       `/api/proctored/admin/${id}/recording-urls`,
+    );
+    return data;
+  },
+
+  // ── Centralised Resume APIs ──────────────────────────────────────────
+
+  getCentralisedResume: async () => {
+    const { data } = await axiosInstance.get("/api/centralised-resume/me");
+    return data;
+  },
+
+  getResumeFitness: async (openingId) => {
+    const { data } = await axiosInstance.get(
+      `/api/centralised-resume/fitness/${openingId}`,
+    );
+    return data;
+  },
+
+  getSkillGap: async (openingId) => {
+    const { data } = await axiosInstance.get(
+      `/api/centralised-resume/gap/${openingId}`,
     );
     return data;
   },

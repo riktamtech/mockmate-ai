@@ -53,6 +53,8 @@ app.use("/api/events", require("./routes/eventsRoutes"));
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
 app.use("/api/applications", require("./routes/applicationRoutes"));
 app.use("/api/fitness", require("./routes/fitnessRoutes"));
+app.use("/api/centralised-resume", require("./routes/centralisedResumeRoutes"));
+app.use("/api/recruiter", require("./routes/recruiterRoutes"));
 
 // Health Check
 app.get("/", (req, res) => {

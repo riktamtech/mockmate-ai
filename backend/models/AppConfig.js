@@ -58,6 +58,15 @@ const appConfigSchema = new mongoose.Schema(
     FEATURE_UPCOMING_EVENTS: { type: Boolean, default: true },
     FEATURE_JOB_ANALYTICS: { type: Boolean, default: true },
     FEATURE_MOCKMATE_DB_SYNC: { type: Boolean, default: true },
+
+    // ── Cross-Platform Integration Feature Flags ────────────────
+    FEATURE_CENTRALISED_RESUME: { type: Boolean, default: true },
+    FEATURE_INTERVIEW_OVERHAUL: { type: Boolean, default: true },
+    INTERVIEW_LIMIT_ENABLED: { type: Boolean, default: false },
+    MAX_INTERVIEWS_ALLOWED: { type: Number, default: 999 },
+    FEATURE_GLOBAL_CANDIDATE_POOL: { type: Boolean, default: true },
+    FEATURE_OPENING_MOCKMATE_TAB: { type: Boolean, default: true },
+    FEATURE_EVENTS_SYNC: { type: Boolean, default: true },
   },
   {
     timestamps: true,

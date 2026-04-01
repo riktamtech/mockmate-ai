@@ -30,6 +30,33 @@ const mockmateConfigSchema = new mongoose.Schema(
       startDate: { type: Date },
       endDate: { type: Date },
     },
+    // ── Custom Questions Config (recruiter-defined) ──────────────
+    customQuestionsConfig: {
+      mode: {
+        type: String,
+        enum: ["DIRECT", "CONCEPT", "NONE"],
+        default: "NONE",
+      },
+      // DIRECT mode: specific questions to ask (one per entry)
+      directQuestions: [{ type: String }],
+      // CONCEPT mode: free-text guidance for areas to probe
+      conceptGuidance: { type: String, default: "" },
+      // Apply to all MockMate candidates for this opening
+      batchApply: { type: Boolean, default: false },
+      // Per-candidate overrides (candidateId → custom config)
+      candidateOverrides: {
+        type: Map,
+        of: new mongoose.Schema(
+          {
+            mode: { type: String, enum: ["DIRECT", "CONCEPT", "NONE"], default: "NONE" },
+            directQuestions: [{ type: String }],
+            conceptGuidance: { type: String, default: "" },
+          },
+          { _id: false },
+        ),
+        default: new Map(),
+      },
+    },
   },
   { _id: false },
 );

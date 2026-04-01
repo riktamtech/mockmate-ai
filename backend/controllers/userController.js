@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const { GoogleGenAI } = require("@google/genai");
 const { compressText } = require('../services/compressionUtils');
 const { generateResumeSummary } = require('../services/fitnessScoreService');
+const { seedFromResume } = require('../services/centralisedResumeService');
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || '' });
 
@@ -334,6 +335,14 @@ IMPORTANT: Return ONLY valid JSON, no markdown, no explanation.`
         resumeDoc.defaultResumeId = resumeDoc.resumes[0]._id;
       }
       await resumeDoc.save();
+
+      // Seed/update CentralisedResume with parsed resume data (non-blocking)
+      const addedEntry = resumeDoc.resumes[resumeDoc.resumes.length - 1];
+      if (rawText && addedEntry?._id) {
+        seedFromResume(user._id, addedEntry._id, rawText).catch((err) =>
+          console.error('[CentralisedResume] Seed from parseResume failed (non-fatal):', err.message)
+        );
+      }
     } catch (cacheErr) {
       console.error('Failed to cache resume (non-fatal):', cacheErr.message);
     }

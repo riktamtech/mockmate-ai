@@ -9,6 +9,7 @@ const {
   generateResumeSummary,
 } = require("../services/fitnessScoreService");
 const ZinterviewService = require("../services/zinterviewService");
+const { seedFromResume: seedCentralisedResume } = require("../services/centralisedResumeService");
 const { uploadFile } = require("../services/s3Service");
 const {
   compressText,
@@ -855,8 +856,15 @@ const uploadApplicationResume = async (req, res) => {
     resumeDoc.addResume(resumeEntry);
     await resumeDoc.save();
 
-    // Find the just-added resume entry
+    // Seed/update CentralisedResume with parsed resume data (non-blocking)
     const addedResume = resumeDoc.resumes[resumeDoc.resumes.length - 1];
+    if (extractedText && addedResume?._id) {
+      seedCentralisedResume(userId, addedResume._id, extractedText).catch((err) =>
+        console.error('[CentralisedResume] Seed from uploadApplicationResume failed (non-fatal):', err.message)
+      );
+    }
+
+    // Find the just-added resume entry (reuse addedResume from above)
 
     res.status(200).json({
       success: true,

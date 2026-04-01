@@ -14,6 +14,7 @@ import {
   ChartNoAxesCombined,
   Bell,
   PanelLeftClose,
+  FileCheck,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppStore } from "../../store/useAppStore";
@@ -54,6 +55,7 @@ export default function AppSidebar({ isOpen, onClose }) {
     { icon: PlayCircle, label: "Practice Interview", path: "/mockmate/candidate/practice" },
     { icon: Sparkles, label: "Proctored Interview", path: "/mockmate/candidate/proctored-interview", badge: "NEW" },
     { icon: Briefcase, label: "Active Job Openings", path: "/mockmate/candidate/jobs", badge: "NEW" },
+    { icon: FileCheck, label: "My Verified Profile", path: "/mockmate/candidate/my-resume", badge: "NEW" },
     { icon: Calendar, label: "Events", path: "/mockmate/candidate/events" },
     { icon: BarChart3, label: "Job Analytics", path: "/mockmate/candidate/analytics" },
     { icon: Bell, label: "Notifications", path: "/mockmate/candidate/notifications" },
